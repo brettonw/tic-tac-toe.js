@@ -1,3 +1,17 @@
+"use strict;" 
+
+//-----------------------------------------------------------------------------
+let Test = {
+    assertTrue : function (message, pass) {
+        console.log ((pass ? "PASS" : "FAIL") + " - " + message);
+        if (pass === false) {
+			if (typeof (exit) !== "undefined") {
+				exit (1);
+			}
+        }
+    }
+};
+
 //-----------------------------------------------------------------------------
 // test functions built on the harness
 //-----------------------------------------------------------------------------
@@ -42,6 +56,7 @@ let testPlayer = function () {
 } ();
 
 let testTransformation = function () {
+    console.log ("testTransformation");
 	Test.assertTrue ("R0.inverse == t", Transformation.R0.inverse () === Transformation.R0);
 	Test.assertTrue ("R2.inverse == t", Transformation.R2.inverse () === Transformation.R2);
 	Test.assertTrue ("F0.inverse == t", Transformation.F0.inverse () === Transformation.F0);
@@ -53,6 +68,7 @@ let testTransformation = function () {
 } ();
 
 let testMove = function () {
+    console.log ("testMove");
     Test.assertTrue("M00 = (0, 0)", (Move.M00.x () == 0) && (Move.M00.y () == 0));
     Test.assertTrue("M01 = (0, 1)", (Move.M01.x () == 0) && (Move.M01.y () == 1));
     Test.assertTrue("M02 = (0, 2)", (Move.M02.x () == 0) && (Move.M02.y () == 2));
@@ -76,6 +92,38 @@ let testMove = function () {
 	Test.assertTrue("(2, 0) = M20", Move.get (2, 0) == Move.M20);
 	Test.assertTrue("(2, 1) = M21", Move.get (2, 1) == Move.M21);
 	Test.assertTrue("(2, 2) = M22", Move.get (2, 2) == Move.M22);
+} ();
+
+let testBoard = function () {
+    console.log ("testBoard");
+	//console.log ("Empty: " + Board.empty ().toString ());
+	Test.assertTrue ("empty === 'EEEEEEEEE'", Board.empty ().toString () === "EEEEEEEEE");
+	Test.assertTrue ("empty === empty", Board.equal (Board.empty (), Board.empty ()));
+	Test.assertTrue ("getPlayer (0, 0) == empty", Board.empty ().getPlayer (Move.M00) == Player.E);
+	Test.assertTrue ("makeMove", Board.empty ().makeMove (Move.M10, Player.X).toString () === "EXEEEEEEE");
+} ();
+
+let testTransforms = function () {
+	let plays = "XXXEOEOEE";
+	let board = Board.fromString (plays);
+	let should;
+	for (let transformation of Transformation.values) {
+		switch (transformation) {
+			case Transformation.R0: should = "XXXEOEOEE"; break;
+			case Transformation.R1: should = "OEXEOXEEX"; break;
+			case Transformation.R2: should = "EEOEOEXXX"; break;
+			case Transformation.R3: should = "XEEXOEXEO"; break;
+			case Transformation.F0: should = "XXXEOEEEO"; break;
+			case Transformation.F1: should = "EEXEOXOEX"; break;
+			case Transformation.F2: should = "OEEEOEXXX"; break;
+			case Transformation.F3: should = "XEOXOEXEE"; break;
+		}
+		let testBoard = board.transform (transformation);
+		let str = transformation.name;
+		Test.assertTrue (str + " == should", testBoard.toString () === should);
+		testBoard = testBoard.transform (transformation.inverse ());
+		Test.assertTrue (str + " (invert) == original", testBoard.toString () === plays);
+	}
 } ();
 
 //-----------------------------------------------------------------------------

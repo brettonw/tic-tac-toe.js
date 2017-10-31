@@ -1,20 +1,5 @@
 "use strict";
 
-let Base = function () {
-	let _ = Object.create (null);
-	
-	_.init = function (parameters) {
-		// empty by default
-	};
-	
-	_.new = function (parameters) {
-		return Object.create (this).init (parameters);
-	};
-	
-	return _;
-} ();
-
-
 let Enum = function () {
     let _ = Object.create (null);
     _.create = function (names) {
@@ -50,7 +35,7 @@ let Player = function () {
     let _ = Enum.create (["E", "X", "O"]);
 
     _.next = function () {
-        return _.values[this.value ^ 0x03];
+        return Player.values[this.value ^ 0x03];
     };
 
     return _;
@@ -62,8 +47,8 @@ let Transformation = function () {
 	
     _.inverse = function () {
 		switch (this) {
-			case _.R1: return _.R3;
-			case _.R3: return _.R1;
+			case Transformation.R1: return Transformation.R3;
+			case Transformation.R3: return Transformation.R1;
 			default: return this;
 		}
     };
@@ -80,7 +65,7 @@ let Move = function () {
 	
 	_.get = function (x, y) {
 		// XXX should check that the move is legal
-		return _.values[(y * Board.DIMENSION) + x];
+		return this.values[(y * Board.DIMENSION) + x];
 	};
 	
     _.x = function () {
@@ -94,19 +79,91 @@ let Move = function () {
     return _;
 } ();
 
-// Board is an abstraction on a string-based representation of a tic-tac-toe board
 let Board = function () {
-    let _ = Object.create (Base);
-
-	// some core values
-    Object.defineProperty(_, "DIMENSION", { value: 3 });
-    Object.defineProperty(_, "SIZE", { value: _.DIMENSION * _.DIMENSION });
-
-	// transormations
+    let _ = Object.create (null);
 	
-    _.init = function (parameters) {
+	// some core values
+    Object.defineProperty (_, "DIMENSION", { value: 3 });
+    Object.defineProperty (_, "SIZE", { value: _.DIMENSION * _.DIMENSION });
 
+	// return a new empty board
+    _.empty = function () {
+		let result = Object.create (Board);
+		result.board = Array (Board.SIZE).fill (Player.E);
+		return result;
     };
+
+	// return a new board from an array
+    _.fromArray = function (source) {
+		let result = Object.create (Board);
+		result.board = source.slice ();
+		return result;
+    };
+	
+	// return a new board from a string
+    _.fromString = function (string) {
+		let result = Object.create (Board);
+		result.board = [];
+		for (let character of string) {
+			result.board.push (Player[character]);
+		}
+		return result;
+    };
+	
+	// return a new board as a copy of the source
+    _.copy = function (source) {
+		let result = Object.create (Board);
+		result.board = source.board.slice ();
+		return result;
+    };
+	
+	// transformations
+	let TRANSFORMATIONS = [
+		/* Transformation.R0 */ [0, 1, 2, 3, 4, 5, 6, 7, 8],
+		/* Transformation.R1 */ [6, 3, 0, 7, 4, 1, 8, 5, 2],
+		/* Transformation.R2 */ [8, 7, 6, 5, 4, 3, 2, 1, 0],
+		/* Transformation.R3 */ [2, 5, 8, 1, 4, 7, 0, 3, 6],
+		/* Transformation.F0 */ [2, 1, 0, 5, 4, 3, 8, 7, 6],
+		/* Transformation.F1 */ [8, 5, 2, 7, 4, 1, 6, 3, 0],
+		/* Transformation.F2 */ [6, 7, 8, 3, 4, 5, 0, 1, 2],
+		/* Transformation.F3 */ [0, 3, 6, 1, 4, 7, 2, 5, 8]
+	];
+	
+	// return a new board that is a transformation of this one
+	_.transform = function (transformation) {
+		let result = Object.create (Board);
+		let from = this.board;
+		result.board = [];
+		TRANSFORMATIONS[transformation.value].forEach (function (index) {
+			result.board.push (from[index]);
+		})
+		return result;
+	};
+	
+	// make a move on this board, note that the referee ensures moves are legal
+	// so the Board class itself doesn't need to do that
+	_.makeMove = function (move, player) {
+		this.board[move.value] = player;
+		return this;
+	};
+	
+	// return the player that occupies the given move
+	_.getPlayer = function (move) {
+		return this.board[move.value];
+	};
+	
+	// return a string representation of the board
+	_.toString = function () {
+		let string = "";
+		for (let player of this.board) {
+			string += player.name;
+		}
+		return string;
+	};
+	
+	_.equal = function (left, right) {
+		return left.toString () === right.toString ();
+	};
 
     return _;
 } ();
