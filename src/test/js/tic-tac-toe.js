@@ -2,13 +2,16 @@
 
 //-----------------------------------------------------------------------------
 let Test = {
-    assertTrue : function (message, pass) {
-        console.log ((pass ? "PASS" : "FAIL") + " - " + message);
-        if (pass === false) {
+    assertTrue : function (message, test) {
+        console.log (((test === true) ? "PASS" : "FAIL") + " - " + message);
+        if (test === false) {
 			if (typeof (exit) !== "undefined") {
 				exit (1);
 			}
         }
+    },
+    assertFalse : function (message, test) {
+		Test.assertTrue (message, test === false);
     }
 };
 
@@ -103,7 +106,8 @@ let testBoard = function () {
 	Test.assertTrue ("makeMove", Board.empty ().makeMove (Move.M10, Player.X).toString () === "EXEEEEEEE");
 } ();
 
-let testTransforms = function () {
+let testBoardTransforms = function () {
+    console.log ("testBoardTransforms");
 	let plays = "XXXEOEOEE";
 	let board = Board.fromString (plays);
 	let should;
@@ -123,6 +127,44 @@ let testTransforms = function () {
 		Test.assertTrue (str + " == should", testBoard.toString () === should);
 		testBoard = testBoard.transform (transformation.inverse ());
 		Test.assertTrue (str + " (invert) == original", testBoard.toString () === plays);
+	}
+} ();
+
+let testRefereeLegalMoves = function () {
+	console.log ("testRefereeLegalMoves");
+	let board = Board.empty ();
+	let moves = Referee.getAvailableMoves (board);
+	Test.assertTrue ("Empty board has " + Board.SIZE + " available moves", moves.length == Board.SIZE);
+	board.makeMove (Move.M00, Player.X);
+	moves = Referee.getAvailableMoves (board);
+	Test.assertTrue ("Empty board has " + (Board.SIZE - 1) + " available moves", moves.length == (Board.SIZE - 1));
+	for (let move of moves) {
+		Test.assertFalse (Move.M00.name + " is not in available moves", Move.M00 == move);
+	}
+} ();
+
+let testRefereeWins = function () {
+	console.log ("testRefereeWins");
+	let wins = Referee.getWins ();
+	for (let win of wins) {
+		let board = Board.fromString (win);
+		//console.log ("board: " + board.toString ());
+		Test.assertTrue ("Test board (" + board.toString () + ") should win", Referee.checkWinner (board) == win[Board.SIZE]);
+	}
+} ();
+
+let testRefereeNonWins = function () {
+	console.log ("testRefereeNonWins");
+	let nonWins = [
+		"EEEEEEEEE",
+		"EEXEEEEEE",
+		"EEXOEEEEE",
+		"EEXOXEEEE",
+		"EEXOXOEEE"
+	];
+	for (let nonWin of nonWins) {
+		let board = Board.fromString (nonWin);
+		Test.assertTrue ("Test board (" + board.toString () + ") should not win", Referee.checkWinner (board) == Player.E);
 	}
 } ();
 

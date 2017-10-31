@@ -117,8 +117,10 @@ let Board = function () {
 		return result;
     };
 	
-	// transformations
-	let TRANSFORMATIONS = [
+	// transformations - these look magic, but they are the indices of the 
+	//                   values to take into the new array for each of these
+	//					 individual transformations.
+	const TRANSFORMATIONS = [
 		/* Transformation.R0 */ [0, 1, 2, 3, 4, 5, 6, 7, 8],
 		/* Transformation.R1 */ [6, 3, 0, 7, 4, 1, 8, 5, 2],
 		/* Transformation.R2 */ [8, 7, 6, 5, 4, 3, 2, 1, 0],
@@ -165,5 +167,71 @@ let Board = function () {
 		return left.toString () === right.toString ();
 	};
 
+    return _;
+} ();
+
+let Referee = function () {
+	let _ = Object.create (null);
+	
+	const WINS = [
+		"XXXEEEEEEX",
+		"EEEXXXEEEX",
+		"EEEEEEXXXX",
+		"XEEXEEXEEX",
+		"EXEEXEEXEX",
+		"EEXEEXEEXX",
+		"XEEEXEEEXX",
+		"EEXEXEXEEX",
+		"OOOEEEEEEO",
+		"EEEOOOEEEO",
+		"EEEEEEOOOO",
+		"OEEOEEOEEO",
+		"EOEEOEEOEO",
+		"EEOEEOEEOO",
+		"OEEEOEEEOO",
+		"EEOEOEOEEO"
+	];
+	
+	_.getWins = function () {
+		return WINS;
+	};
+	
+	// loop over all of the open spaces on the board to determine allowed moves
+	_.getAvailableMoves = function (board) {
+		// get the underlying representation
+		board = board.board;
+		let moves = [];
+		for (let move of Move.values) {
+			if (board[move.value] === Player.E) {
+				moves.push (move);
+			}
+		}
+		return (moves.length) > 0 ? moves : null;
+	};
+	
+	// this is aslightly clever way to loop over all of the winning board 
+	// configurations to see if any given board matches one of them
+	_.checkWinner = function (board) {
+		// get the underlying representation
+		board = board.board;
+		
+		for (let win of WINS) {
+			let maskedSum = 0;
+			// add the number of matching spaces together as the player value - 
+			// then divide that by three to get which player they match. If that
+			// result matches the win configuration of the board, then it is a 
+			// win for that player
+			for (let i = 0; i < Board.SIZE; ++i) {
+				maskedSum += board[i].value & Player[win[i]].value;
+			}
+			if (Player.values[Math.floor (maskedSum / 3)].name == win[Board.SIZE]) {
+				return win[Board.SIZE];
+			}
+		}
+		
+		// nobody matched - it's an E...
+		return Player.E;
+	};
+	
     return _;
 } ();
