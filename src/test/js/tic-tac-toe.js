@@ -41,4 +41,41 @@ let testPlayer = function () {
     Test.assertTrue("player.next (O -> X)", Player.O.next () === Player.X);
 } ();
 
+let testTransformation = function () {
+	Test.assertTrue ("R0.inverse == t", Transformation.R0.inverse () === Transformation.R0);
+	Test.assertTrue ("R2.inverse == t", Transformation.R2.inverse () === Transformation.R2);
+	Test.assertTrue ("F0.inverse == t", Transformation.F0.inverse () === Transformation.F0);
+	Test.assertTrue ("F1.inverse == t", Transformation.F1.inverse () === Transformation.F1);
+	Test.assertTrue ("F2.inverse == t", Transformation.F2.inverse () === Transformation.F2);
+	Test.assertTrue ("F3.inverse == t", Transformation.F3.inverse () === Transformation.F3);
+	Test.assertTrue ("R1.inverse == R3", Transformation.R1.inverse () === Transformation.R3);
+	Test.assertTrue ("R3.inverse == R1", Transformation.R3.inverse () === Transformation.R1);
+} ();
+
+let testMove = function () {
+    Test.assertTrue("M00 = (0, 0)", (Move.M00.x () == 0) && (Move.M00.y () == 0));
+    Test.assertTrue("M01 = (0, 1)", (Move.M01.x () == 0) && (Move.M01.y () == 1));
+    Test.assertTrue("M02 = (0, 2)", (Move.M02.x () == 0) && (Move.M02.y () == 2));
+
+    Test.assertTrue("M10 = (1, 0)", (Move.M10.x () == 1) && (Move.M10.y () == 0));
+    Test.assertTrue("M11 = (1, 1)", (Move.M11.x () == 1) && (Move.M11.y () == 1));
+    Test.assertTrue("M12 = (1, 2)", (Move.M12.x () == 1) && (Move.M12.y () == 2));
+
+    Test.assertTrue("M20 = (2, 0)", (Move.M20.x () == 2) && (Move.M20.y () == 0));
+    Test.assertTrue("M21 = (2, 1)", (Move.M21.x () == 2) && (Move.M21.y () == 1));
+    Test.assertTrue("M22 = (2, 2)", (Move.M22.x () == 2) && (Move.M22.y () == 2));
+
+	Test.assertTrue("(0, 0) = M00", Move.get (0, 0) == Move.M00);
+	Test.assertTrue("(0, 1) = M01", Move.get (0, 1) == Move.M01);
+	Test.assertTrue("(0, 2) = M02", Move.get (0, 2) == Move.M02);
+
+	Test.assertTrue("(1, 0) = M10", Move.get (1, 0) == Move.M10);
+	Test.assertTrue("(1, 1) = M11", Move.get (1, 1) == Move.M11);
+	Test.assertTrue("(1, 2) = M12", Move.get (1, 2) == Move.M12);
+
+	Test.assertTrue("(2, 0) = M20", Move.get (2, 0) == Move.M20);
+	Test.assertTrue("(2, 1) = M21", Move.get (2, 1) == Move.M21);
+	Test.assertTrue("(2, 2) = M22", Move.get (2, 2) == Move.M22);
+} ();
+
 //-----------------------------------------------------------------------------
