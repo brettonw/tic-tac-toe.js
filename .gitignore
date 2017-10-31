@@ -13,3 +13,9 @@ buildNumber.properties
 
 # apple files...
 .DS_Store
+
+#intelliJ
+.idea
+*.iml
+build.txt
+
