@@ -1,5 +1,6 @@
 "use strict";
 
+// XXX - might be interesting to add enumeration protocols to "Enum"
 let Enum = function () {
     let _ = Object.create (null);
     _.create = function (names) {
@@ -43,7 +44,10 @@ let Player = function () {
 
 // 8 transformations represent 4 rotations, and a flip on the x-axis with 4 rotations
 let Transformation = function () {
-	let _ = Enum.create (["R0", "R1", "R2", "R3", "F0", "F1", "F2", "F3"]);
+	let _ = Enum.create ([
+		"R0", "R1", "R2", "R3", 
+		"F0", "F1", "F2", "F3"
+	]);
 	
     _.inverse = function () {
 		switch (this) {
