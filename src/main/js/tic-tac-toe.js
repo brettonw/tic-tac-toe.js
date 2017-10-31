@@ -170,6 +170,9 @@ let Board = function () {
     return _;
 } ();
 
+// referree is a singleton object that knows how to play the game. if you want
+// to make a move, you ask the referee what you can do, and you ask the referee
+// if you won...
 let Referee = function () {
 	let _ = Object.create (null);
 	
@@ -209,7 +212,7 @@ let Referee = function () {
 		return (moves.length) > 0 ? moves : null;
 	};
 	
-	// this is aslightly clever way to loop over all of the winning board 
+	// this is a slightly clever way to loop over all of the winning board 
 	// configurations to see if any given board matches one of them
 	_.checkWinner = function (board) {
 		// get the underlying representation
@@ -234,4 +237,33 @@ let Referee = function () {
 	};
 	
     return _;
+} ();
+
+// archive is a reference to all of the known board positions, and how we got there
+let Archive = function () {
+	let _ = Object.create (null);
+	
+	let archive = Object.create (null);
+	
+	_.getGame = function (board) {
+        for (let transformation of Transformation.values) {
+            let transformedBoard = board.transform (transformation);
+			let transformedBoardRef = transformedBoard.toString ();
+            if (transformedBoardRef in archive) {
+                console.log ("Linking existing node (" + transformedBoardRef + ")");
+				return {
+					transformation: transformation,
+					board: archive[transformedBoardRef]
+				};
+            }
+        }
+        return null;
+	};
+	
+	_.putGame = function (board) {
+		let boardRef = board.toString ();
+		archive[boardRef] = board;
+	};
+		
+	return _;
 } ();
