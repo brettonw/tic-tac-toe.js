@@ -41,6 +41,22 @@ let testEnum = function () {
     Test.assertTrue("C.names indexed", e[e.names[2]] == e.C);
     Test.assertTrue("C.names", e.names[2] == e.C.name);
     Test.assertTrue("C.value", e.values[2] == e.C);
+	
+	Test.assertTrue ("A.toString ()", e.A.toString () === e.A.name);
+	Test.assertTrue ("B.toString ()", e.B.toString () === e.B.name);
+	Test.assertTrue ("C.toString ()", e.C.toString () === e.C.name);
+	
+	Test.assertTrue ("A - implicit conversion [" + e.A + "]", ("e.A = (" + e.A + ")") == "e.A = (A)");
+	Test.assertTrue ("B - implicit conversion [" + e.B + "]", ("e.B = (" + e.B + ")") == "e.B = (B)");
+	Test.assertTrue ("C - implicit conversion [" + e.C + "]", ("e.C = (" + e.C + ")") == "e.C = (C)");
+	
+	// test iteration over 'e'
+	let compare = { A: "A", B: "B", C: "C"};
+	for (let memberName in e) {
+		Test.assertTrue (memberName + " is expected", compare[memberName] == memberName);
+		Test.assertTrue (memberName + " is implictly converted", compare[memberName] == e[memberName]);
+		Test.assertTrue (memberName + " is an object", compare[memberName] !== e[memberName]);
+	}
 } ();
 
 let testPlayer = function () {

@@ -27,6 +27,9 @@ let Enum = function () {
         Object.defineProperty (createdEnum, "names", { value: names });
         Object.defineProperty (createdEnum, "values", { value: enumeratedValues });
 
+		// the toString property so that we can implicitly treat this thing as a string
+        Object.defineProperty (createdEnum, "toString", { value: function () { return this.name; } });
+
         return createdEnum;
     };
     return _;
@@ -124,23 +127,22 @@ let Board = function () {
 	// transformations - these look magic, but they are the indices of the 
 	//                   values to take into the new array for each of these
 	//					 individual transformations.
-	const TRANSFORMATIONS = [
-		/* Transformation.R0 */ [0, 1, 2, 3, 4, 5, 6, 7, 8],
-		/* Transformation.R1 */ [6, 3, 0, 7, 4, 1, 8, 5, 2],
-		/* Transformation.R2 */ [8, 7, 6, 5, 4, 3, 2, 1, 0],
-		/* Transformation.R3 */ [2, 5, 8, 1, 4, 7, 0, 3, 6],
-		/* Transformation.F0 */ [2, 1, 0, 5, 4, 3, 8, 7, 6],
-		/* Transformation.F1 */ [8, 5, 2, 7, 4, 1, 6, 3, 0],
-		/* Transformation.F2 */ [6, 7, 8, 3, 4, 5, 0, 1, 2],
-		/* Transformation.F3 */ [0, 3, 6, 1, 4, 7, 2, 5, 8]
-	];
+	const TRANSFORMATIONS = Object.create (null);
+	TRANSFORMATIONS[Transformation.R0] = [0, 1, 2, 3, 4, 5, 6, 7, 8];
+	TRANSFORMATIONS[Transformation.R1] = [6, 3, 0, 7, 4, 1, 8, 5, 2];
+	TRANSFORMATIONS[Transformation.R2] = [8, 7, 6, 5, 4, 3, 2, 1, 0];
+	TRANSFORMATIONS[Transformation.R3] = [2, 5, 8, 1, 4, 7, 0, 3, 6];
+	TRANSFORMATIONS[Transformation.F0] = [2, 1, 0, 5, 4, 3, 8, 7, 6];
+	TRANSFORMATIONS[Transformation.F1] = [8, 5, 2, 7, 4, 1, 6, 3, 0];
+	TRANSFORMATIONS[Transformation.F2] = [6, 7, 8, 3, 4, 5, 0, 1, 2];
+	TRANSFORMATIONS[Transformation.F3] = [0, 3, 6, 1, 4, 7, 2, 5, 8];
 	
 	// return a new board that is a transformation of this one
 	_.transform = function (transformation) {
 		let result = Object.create (Board);
 		let from = this.board;
 		result.board = [];
-		TRANSFORMATIONS[transformation.value].forEach (function (index) {
+		TRANSFORMATIONS[transformation].forEach (function (index) {
 			result.board.push (from[index]);
 		})
 		return result;
@@ -162,7 +164,7 @@ let Board = function () {
 	_.toString = function () {
 		let string = "";
 		for (let player of this.board) {
-			string += player.name;
+			string += player;
 		}
 		return string;
 	};
@@ -231,7 +233,7 @@ let Referee = function () {
 			for (let i = 0; i < Board.SIZE; ++i) {
 				maskedSum += board[i].value & Player[win[i]].value;
 			}
-			if (Player.values[Math.floor (maskedSum / 3)].name == win[Board.SIZE]) {
+			if (Player.values[Math.floor (maskedSum / 3)] == win[Board.SIZE]) {
 				return win[Board.SIZE];
 			}
 		}
@@ -241,6 +243,61 @@ let Referee = function () {
 	};
 	
     return _;
+} ();
+
+let GameState = function () {
+	let _ = Object.create (null);
+	
+	let archive = Object.create (null);
+	
+	_.get = function (board) {
+		let gameStateRef = board.toString ();
+		return (gameStateRef in archive) ? archive[gameStateRef] : null;
+	};
+	
+	_.get = function (board) {
+        for (let transformation of Transformation.values) {
+            let transformedBoard = board.transform (transformation);
+			let transformedBoardRef = transformedBoard.toString ();
+            if (transformedBoardRef in archive) {
+                console.log ("Found existing node (" + transformedBoardRef + " on transformation " + transformation + ")");
+				return {
+					transformation: transformation,
+					board: archive[transformedBoardRef]
+				};
+            }
+        }
+        return null;
+	};
+
+	_.create = function (board) {
+		let gameStateRef = board.toString ();
+		let gameState = Object.create (null);
+		gameState.board = board;
+		gameState.parentLinks = Object.create (null);
+		gameState.childLinks = Object.create (null);
+		archive[gameStateRef] = gameState;
+		return gameState;
+	};
+
+
+	// board
+	// player to move (is this strictly necessary?)
+	// set of parent links
+	// set of child links
+
+	return _;
+} ();
+
+let GameStateLink = function () {
+	let _ = Object.create (null);
+	
+	// fromRef
+	// move
+	// transformation
+	// toRef
+	
+	return _;
 } ();
 
 // archive is a reference to all of the known board positions, and how we got there
