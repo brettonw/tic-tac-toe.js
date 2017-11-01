@@ -1,29 +1,18 @@
 "use strict";
 
 //-----------------------------------------------------------------------------
-// helper objects that echo typical Javascript in a browser
-//-----------------------------------------------------------------------------
-let console = {
-    log : function (text) {
-        print (text);
+let Test = {
+    assertTrue : function (message, test) {
+        console.log (((test === true) ? "PASS" : "FAIL") + " - " + message);
+        if (test === false) {
+			if (typeof (exit) !== "undefined") {
+				exit (1);
+			}
+        }
+    },
+    assertFalse : function (message, test) {
+		Test.assertTrue (message, test === false);
     }
 };
-
-//-----------------------------------------------------------------------------
-// Array.fill - because jjs doesn't seem to have it
-if (typeof (Array.prototype.fill) === "undefined") {
-	Array.prototype.fill = function (value, start, end) {
-		if (typeof (end) === "undefined") {
-			end = this.length;
-			if (typeof (start) === "undefined") {
-				start = 0;
-			}
-		}
-		for (let i = start; i < end; ++i) {
-			this[i] = value;
-		}
-		return this;
-	}
-}
 
 //-----------------------------------------------------------------------------

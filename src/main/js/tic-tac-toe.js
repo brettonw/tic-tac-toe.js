@@ -1,39 +1,5 @@
 "use strict";
 
-let Enum = function () {
-    let _ = Object.create (null);
-    _.create = function (names) {
-        let createdEnum = Object.create (null);
-
-        // function to create an enumerated object
-        let make = function (name, value) {
-            //console.log ("enumerate '" + name + "' = " + value);
-            let enumeratedValue = Object.create (createdEnum);
-            Object.defineProperty(enumeratedValue, "name", { value: name });
-            Object.defineProperty(enumeratedValue, "value", { value: value });
-            return enumeratedValue;
-        };
-
-        // create the enumerated values, which are Objects of this type already populated
-        let enumeratedValues = [];
-        for (let name of names) {
-            let enumeratedValue = make (name, enumeratedValues.length);
-            enumeratedValues.push(enumeratedValue);
-            Object.defineProperty (createdEnum, name, { value: enumeratedValue, enumerable: true });
-        }
-
-        // save the names and values independently
-        Object.defineProperty (createdEnum, "names", { value: names });
-        Object.defineProperty (createdEnum, "values", { value: enumeratedValues });
-
-		// the toString property so that we can implicitly treat this thing as a string
-        Object.defineProperty (createdEnum, "toString", { value: function () { return this.name; } });
-
-        return createdEnum;
-    };
-    return _;
-} ();
-
 let Player = function () {
     let _ = Enum.create (["E", "X", "O"]);
 
@@ -282,7 +248,7 @@ let State = function () {
         return null;
 	};
 	
-	// this is the worker function that populates teh archive of game states
+	// this is the worker function that populates the archive of game states
 	let linkCount = 0;
 	let winCounts = [0, 0, 0];
 	let wins = Object.create (null);
