@@ -184,4 +184,9 @@ let testRefereeNonWins = function () {
 	}
 } ();
 
+let testState = function () {
+	console.log ("testState");
+	//State.root.play (Player.X);
+} ();
+
 //-----------------------------------------------------------------------------

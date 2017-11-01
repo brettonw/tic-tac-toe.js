@@ -215,7 +215,7 @@ let Referee = function () {
 				moves.push (move);
 			}
 		}
-		return (moves.length) > 0 ? moves : null;
+		return moves;
 	};
 	
 	// this is a slightly clever way to loop over all of the winning board 
@@ -234,7 +234,7 @@ let Referee = function () {
 				maskedSum += board[i].value & Player[win[i]].value;
 			}
 			if (Player.values[Math.floor (maskedSum / 3)] == win[Board.SIZE]) {
-				return win[Board.SIZE];
+				return Player[win[Board.SIZE]];
 			}
 		}
 		
@@ -245,86 +245,101 @@ let Referee = function () {
     return _;
 } ();
 
-let GameState = function () {
+// a representation of the configuration space as an entity, and a collection
+let State = function () {
 	let _ = Object.create (null);
 	
 	let archive = Object.create (null);
 	
-	_.get = function (board) {
-		let gameStateRef = board.toString ();
-		return (gameStateRef in archive) ? archive[gameStateRef] : null;
+	let makeLink = function (transformation, state) {
+		return {
+			transformation: transformation,
+			to: state
+		};
 	};
 	
-	_.get = function (board) {
-        for (let transformation of Transformation.values) {
-            let transformedBoard = board.transform (transformation);
-			let transformedBoardRef = transformedBoard.toString ();
-            if (transformedBoardRef in archive) {
-                console.log ("Found existing node (" + transformedBoardRef + " on transformation " + transformation + ")");
-				return {
-					transformation: transformation,
-					board: archive[transformedBoardRef]
-				};
-            }
-        }
-        return null;
-	};
-
+	let stateCount = 0;
 	_.create = function (board) {
-		let gameStateRef = board.toString ();
-		let gameState = Object.create (null);
-		gameState.board = board;
-		gameState.parentLinks = Object.create (null);
-		gameState.childLinks = Object.create (null);
-		archive[gameStateRef] = gameState;
-		return gameState;
+		++stateCount;
+		let state = archive[board] = Object.create (_);
+		state.board = board;
+		state.parentLinks = Object.create (null);
+		state.childLinks = Object.create (null);
+		state.winner = Player.E;
+		return state;
 	};
-
-
-	// board
-	// player to move (is this strictly necessary?)
-	// set of parent links
-	// set of child links
-
-	return _;
-} ();
-
-let GameStateLink = function () {
-	let _ = Object.create (null);
 	
-	// fromRef
-	// move
-	// transformation
-	// toRef
-	
-	return _;
-} ();
-
-// archive is a reference to all of the known board positions, and how we got there
-let Archive = function () {
-	let _ = Object.create (null);
-	
-	let archive = Object.create (null);
-	
-	_.getGame = function (board) {
+	// find a game state that matches the requested board, searching all of the
+	// possible transformations - returns it as a link
+	_.find = function (board) {
         for (let transformation of Transformation.values) {
             let transformedBoard = board.transform (transformation);
-			let transformedBoardRef = transformedBoard.toString ();
-            if (transformedBoardRef in archive) {
-                console.log ("Linking existing node (" + transformedBoardRef + ")");
-				return {
-					transformation: transformation,
-					board: archive[transformedBoardRef]
-				};
+            if (transformedBoard in archive) {
+				return makeLink (transformation, archive[transformedBoard]);
             }
         }
         return null;
 	};
 	
-	_.putGame = function (board) {
-		let boardRef = board.toString ();
-		archive[boardRef] = board;
-	};
+	// this is the worker function that populates teh archive of game states
+	let linkCount = 0;
+	let winCounts = [0, 0, 0];
+	let wins = Object.create (null);
+	let playAll = function (link, player) {
+		let state = link.to;
 		
+		// iterate over all the available moves
+		let board = state.board;
+		for (let move of Referee.getAvailableMoves (board)) {
+			// make the move, and see if we've already explored this branch
+			let newBoard = Board.copy (board).makeMove (move, player);
+			let newLink = _.find (newBoard);
+			if (newLink == null) {
+				// we haven't explored this branch, so create a new state for 
+				// it, and make a link with an identity transformation
+				let newState = _.create (newBoard);
+				newLink = makeLink (Transformation.R0, newState);
+
+				// check to see if the player just won the game
+				if (Referee.checkWinner (newBoard) === player) {
+					//console.log ("Win for " + player + " on: " + newBoard);
+					winCounts[player.value]++;
+					wins[newBoard] = newState;
+					state.winner = player;
+				} else {
+					// they didn't, so use recursion to keep playing. note we
+					// don't need to worry about this recursion, as it can 
+					// never go deeper than the max number of moves (9)
+					playAll (makeLink (Transformation.R0, newState), player.next ());
+				}
+			} else {
+				// stop populating from here because the branch has already 
+				// been played
+				// console.log ("Found existing state (" + newLink.state.board + " on transformation " + newLink.transformation + ")");
+			}
+			
+			// update the link, and add it to both states, the child links can
+			// never be anything other than valid moves, but the parental links
+			// might not be unique on the move due to the transformations - so 
+			// we concatenate the transformation with the move
+			++linkCount;
+			newLink.move = move;
+			newLink.from = state;
+			state.childLinks[move] = newLink;
+			newLink.to.parentLinks[move + "/" + newLink.transformation] = newLink;
+		}
+	};
+	
+	// populate the archive
+	_.root = _.create (Board.empty ());
+	_.init = function () {
+		playAll (makeLink (Transformation.R0, State.root), Player.X);
+		console.log ("State Count: " + stateCount);
+		console.log ("Link Count: " + linkCount);
+		console.log ("Wins: " + Object.keys(wins).length + " (X " + winCounts[Player.X.value] + ", O " + winCounts[Player.O.value] + ")");
+	}
+
 	return _;
 } ();
+
+State.init ();
