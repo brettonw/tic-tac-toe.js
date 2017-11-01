@@ -151,7 +151,7 @@ let testRefereeLegalMoves = function () {
 	let board = Board.empty ();
 	let moves = Referee.getAvailableMoves (board);
 	Test.assertTrue ("Empty board has " + Board.SIZE + " available moves", moves.length == Board.SIZE);
-	board.makeMove (Move.M00, Player.X);
+	board = board.makeMove (Move.M00, Player.X);
 	moves = Referee.getAvailableMoves (board);
 	Test.assertTrue ("Empty board has " + (Board.SIZE - 1) + " available moves", moves.length == (Board.SIZE - 1));
 	for (let move of moves) {

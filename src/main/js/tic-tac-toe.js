@@ -1,6 +1,5 @@
 "use strict";
 
-// XXX - might be interesting to add enumeration protocols to "Enum"
 let Enum = function () {
     let _ = Object.create (null);
     _.create = function (names) {
@@ -148,11 +147,13 @@ let Board = function () {
 		return result;
 	};
 	
-	// make a move on this board, note that the referee ensures moves are legal
-	// so the Board class itself doesn't need to do that
+	// return a new board with the requested move made, note that the referee 
+	// ensures moves are legal so the Board class itself doesn't need to do that
 	_.makeMove = function (move, player) {
-		this.board[move.value] = player;
-		return this;
+		let result = Object.create (Board);
+		result.board = this.board.slice ();
+		result.board[move.value] = player;
+		return result;
 	};
 	
 	// return the player that occupies the given move
@@ -292,7 +293,7 @@ let State = function () {
 		let board = state.board;
 		for (let move of Referee.getAvailableMoves (board)) {
 			// make the move, and see if we've already explored this branch
-			let newBoard = Board.copy (board).makeMove (move, player);
+			let newBoard = board.makeMove (move, player);
 			let newLink = _.find (newBoard);
 			if (newLink == null) {
 				// we haven't explored this branch, so create a new state for 
