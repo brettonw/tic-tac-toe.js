@@ -1,7 +1,7 @@
 "use strict";
 
 let Enum = {
-    create: function (names) {
+    create: function () {
         let _ = Object.create (null);
 
         // function to create an enumerated object
@@ -14,6 +14,7 @@ let Enum = {
         };
 
         // create the enumerated values, which are Objects of this type already populated
+        let names = [...arguments];
         let enumeratedValues = [];
         for (let name of names) {
             let enumeratedValue = make (name, enumeratedValues.length);
@@ -25,7 +26,7 @@ let Enum = {
         Object.defineProperty (_, "names", { value: names });
         Object.defineProperty (_, "values", { value: enumeratedValues });
 
-		// the toString property so that we can implicitly treat this thing as a string
+        // the toString property so that we can implicitly treat this thing as a string
         Object.defineProperty (_, "toString", { value: function () { return this.name; } });
 
         return _;

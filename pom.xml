@@ -25,7 +25,6 @@
                                     <arg value="src/main/js/enum.js"/>
                                     <arg value="src/main/js/tic-tac-toe.js"/>
                                     <arg value="src/test/js/test-harness.js"/>
-                                    <arg value="src/test/js/enum.js"/>
                                     <arg value="src/test/js/tic-tac-toe.js"/>
                                 </exec>
                             </target>
