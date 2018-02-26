@@ -1,4 +1,88 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/png" href="icon.png?1"/>
+    <link rel="stylesheet" href="test.css" />
+    <title>Tic-Tac-Toe</title>
+</head>
+<body>
+<svg id="svg-root" onmousedown="handleSvgMouseDown (event);" onmouseup="handleSvgMouseUp (event);" onmousemove="handleSvgMouseMove (event);" onwheel="handleSvgWheel (event);">
+    <g id="g-root">
+        <g id="g-view">
+            <g>
+                <circle cx="0" cy="" r="0.5" stroke="black" stroke-width="0.1" fill="yellow" />
+            </g>
+        </g>
+    </g>
+</svg>
+</body>
+</html>
+
 <script src="src/main/js/enum.js"></script>
 <script src="src/main/js/tic-tac-toe.js"></script>
 <script src="src/test/js/test-harness.js"></script>
 <script src="src/test/js/tic-tac-toe.js"></script>
+
+<script>
+    let svgRoot = document.getElementById("svg-root");
+    let gRoot = document.getElementById("g-root");
+    let bound = svgRoot.getBoundingClientRect();
+    let scale = Math.min (bound.width, bound.height);
+    let translateX = bound.width / (2 * scale);
+    let translateY = bound.height / (2 * scale);
+    gRoot.setAttribute("transform", "scale(" + scale + ") translate(" + translateX + "," + translateY + ")");
+
+    let gView = document.getElementById("g-view");
+    let viewTranslateX = 0;
+    let viewTranslateY = 0;
+    let viewScales = [];
+
+    // generate a bunch of steps for zooming smoothly, this uses a square root curve for a
+    // perceptually linear progression
+    let rangeMin = 0.025;
+    let rangeMax = 2.0;
+    let range = rangeMax / rangeMin;
+    let steps = range / 2; // 32
+    for (let i = 0; i <= steps; ++i) {
+        let delta = i / steps;
+        viewScales.push((1 + ((delta * delta) * range)) * rangeMin);
+    }
+    let viewScaleIndex = steps / 2;
+
+    let setViewTransform = function () {
+        gView.setAttribute("transform", "translate(" + viewTranslateX + "," + viewTranslateY + ") scale(" + viewScales[viewScaleIndex] + ")");
+    };
+    setViewTransform ();
+
+    let mouseDownEvent = null;
+    let oldViewTranslateX, oldViewTranslateY;
+    let handleSvgMouseDown = function (event) {
+        mouseDownEvent = event;
+        oldViewTranslateX = viewTranslateX;
+        oldViewTranslateY = viewTranslateY;
+        console.log ("down");
+    };
+
+    let handleSvgMouseUp = function (event) {
+        mouseDownEvent = null;
+        console.log ("up");
+    };
+
+    let handleSvgMouseMove = function (event) {
+        if (mouseDownEvent !== null) {
+            console.log ("move");
+            let deltaX = (event.offsetX - mouseDownEvent.offsetX) / scale;
+            let deltaY = (event.offsetY - mouseDownEvent.offsetY) / scale;
+            viewTranslateX = oldViewTranslateX + deltaX;
+            viewTranslateY = oldViewTranslateY + deltaY;
+            setViewTransform();
+        }
+    };
+
+    let handleSvgWheel = function (event) {
+        console.log ("wheel");
+        viewScaleIndex = Math.max (0, Math.min (viewScales.length - 1, viewScaleIndex + (event.wheelDeltaY / Math.abs(event.wheelDeltaY))));
+        setViewTransform();
+    };
+</script>
