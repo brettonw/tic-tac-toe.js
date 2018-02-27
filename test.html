@@ -7,30 +7,51 @@
     <title>Tic-Tac-Toe</title>
 </head>
 <body>
-<svg id="svg-root" onmousedown="handleSvgMouseDown (event);" onmouseup="handleSvgMouseUp (event);" onmousemove="handleSvgMouseMove (event);" onwheel="handleSvgWheel (event);">
-    <g id="g-root">
-        <g id="g-view">
-            <g>
-                <circle cx="0" cy="" r="0.5" stroke="black" stroke-width="0.1" fill="yellow" />
-            </g>
-        </g>
-    </g>
-</svg>
 </body>
 </html>
 
-<script src="src/main/js/enum.js"></script>
+<script src="https://bedrock.brettonw.com/dist/latest/bedrock-debug.js"></script>
+<script>let Enum = Bedrock.Enum; </script>
 <script src="src/main/js/tic-tac-toe.js"></script>
 <script src="src/test/js/test-harness.js"></script>
 <script src="src/test/js/tic-tac-toe.js"></script>
 
 <script>
-    let svgRoot = document.getElementById("svg-root");
-    let gRoot = document.getElementById("g-root");
-    let bound = svgRoot.getBoundingClientRect();
+    let Builder = Bedrock.Html.Builder;
+    let body = document.getElementsByTagName("body")[0];
+
+    let parent = body;
+    let bound = parent.getClientRects()[0];
+    let svgRoot = Builder
+        .begin("svg", {
+            id: "svg-root",
+            onmousedown: "handleSvgMouseDown (event);",
+            onmouseup: "handleSvgMouseUp (event);",
+            onmousemove: "handleSvgMouseMove (event);",
+            onwheel: "handleSvgWheel (event);",
+            width: bound.width,
+            height: bound.height
+        })
+
+        .begin ("g", { id: "g-root", class: "fill" })
+        .begin ("g", { id: "g-view", class: "fill" })
+        .add ("circle", {
+            cx:"0",
+            cy:"0",
+            r:"0.5",
+            stroke:"black",
+            "stroke-width":"0.1",
+            fill:"yellow"
+        })
+        .end ()
+        .end ()
+        .end ();
+    parent.appendChild(svgRoot);
+
     let scale = Math.min (bound.width, bound.height);
     let translateX = bound.width / (2 * scale);
     let translateY = bound.height / (2 * scale);
+    let gRoot = document.getElementById("g-root");
     gRoot.setAttribute("transform", "scale(" + scale + ") translate(" + translateX + "," + translateY + ")");
 
     let gView = document.getElementById("g-view");
@@ -38,17 +59,20 @@
     let viewTranslateY = 0;
     let viewScales = [];
 
-    // generate a bunch of steps for zooming smoothly, this uses a square root curve for a
-    // perceptually linear progression
-    let rangeMin = 0.025;
+    // generate a bunch of steps for zooming smoothly, this uses a square root
+    // curve for a perceptually linear progression. The values are scaled so that
+    // we start with a zoom factor at exactly 1.0
+    let rangeMin = 0.0125;
     let rangeMax = 2.0;
-    let range = rangeMax / rangeMin;
-    let steps = range / 2; // 32
+    let steps = 40;
+    let viewScaleIndex = Math.round(Math.sqrt ((1 - rangeMin) / rangeMax) * steps);
+    let viewScaleNormalizer = viewScaleIndex / steps;
+    viewScaleNormalizer = rangeMin + ((viewScaleNormalizer * viewScaleNormalizer) * rangeMax)
     for (let i = 0; i <= steps; ++i) {
         let delta = i / steps;
-        viewScales.push((1 + ((delta * delta) * range)) * rangeMin);
+        let viewScale = (rangeMin + ((delta * delta) * rangeMax)) / viewScaleNormalizer;
+        viewScales.push(viewScale);
     }
-    let viewScaleIndex = steps / 2;
 
     let setViewTransform = function () {
         gView.setAttribute("transform", "translate(" + viewTranslateX + "," + viewTranslateY + ") scale(" + viewScales[viewScaleIndex] + ")");
