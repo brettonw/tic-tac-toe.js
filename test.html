@@ -3,10 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <link rel="icon" type="image/png" href="icon.png?1"/>
+    <link rel="stylesheet" href="https://bedrock.brettonw.com/dist/latest/bedrock.css" />
     <link rel="stylesheet" href="test.css" />
     <title>Tic-Tac-Toe</title>
 </head>
-<body>
+<body id="body">
 </body>
 </html>
 
@@ -17,96 +18,120 @@
 <script src="src/test/js/tic-tac-toe.js"></script>
 
 <script>
-    let Builder = Bedrock.Html.Builder;
-    let body = document.getElementsByTagName("body")[0];
 
-    let parent = body;
-    let bound = parent.getClientRects()[0];
-    let svgRoot = Builder
-        .begin("svg", {
-            id: "svg-root",
-            onmousedown: "handleSvgMouseDown (event);",
-            onmouseup: "handleSvgMouseUp (event);",
-            onmousemove: "handleSvgMouseMove (event);",
-            onwheel: "handleSvgWheel (event);",
-            width: bound.width,
-            height: bound.height
-        })
+    let SvgTransformer = function () {
+        let _ = Object.create(Bedrock.Base);
 
-        .begin ("g", { id: "g-root", class: "fill" })
-        .begin ("g", { id: "g-view", class: "fill" })
-        .add ("circle", {
-            cx:"0",
-            cy:"0",
-            r:"0.5",
-            stroke:"black",
-            "stroke-width":"0.1",
-            fill:"yellow"
-        })
-        .end ()
-        .end ()
-        .end ();
-    parent.appendChild(svgRoot);
-
-    let scale = Math.min (bound.width, bound.height);
-    let translateX = bound.width / (2 * scale);
-    let translateY = bound.height / (2 * scale);
-    let gRoot = document.getElementById("g-root");
-    gRoot.setAttribute("transform", "scale(" + scale + ") translate(" + translateX + "," + translateY + ")");
-
-    let gView = document.getElementById("g-view");
-    let viewTranslateX = 0;
-    let viewTranslateY = 0;
-    let viewScales = [];
-
-    // generate a bunch of steps for zooming smoothly, this uses a square root
-    // curve for a perceptually linear progression. The values are scaled so that
-    // we start with a zoom factor at exactly 1.0
-    let rangeMin = 0.0125;
-    let rangeMax = 2.0;
-    let steps = 40;
-    let viewScaleIndex = Math.round(Math.sqrt ((1 - rangeMin) / rangeMax) * steps);
-    let viewScaleNormalizer = viewScaleIndex / steps;
-    viewScaleNormalizer = rangeMin + ((viewScaleNormalizer * viewScaleNormalizer) * rangeMax)
-    for (let i = 0; i <= steps; ++i) {
-        let delta = i / steps;
-        let viewScale = (rangeMin + ((delta * delta) * rangeMax)) / viewScaleNormalizer;
-        viewScales.push(viewScale);
-    }
-
-    let setViewTransform = function () {
-        gView.setAttribute("transform", "translate(" + viewTranslateX + "," + viewTranslateY + ") scale(" + viewScales[viewScaleIndex] + ")");
-    };
-    setViewTransform ();
-
-    let mouseDownEvent = null;
-    let oldViewTranslateX, oldViewTranslateY;
-    let handleSvgMouseDown = function (event) {
-        mouseDownEvent = event;
-        oldViewTranslateX = viewTranslateX;
-        oldViewTranslateY = viewTranslateY;
-        console.log ("down");
-    };
-
-    let handleSvgMouseUp = function (event) {
-        mouseDownEvent = null;
-        console.log ("up");
-    };
-
-    let handleSvgMouseMove = function (event) {
-        if (mouseDownEvent !== null) {
-            console.log ("move");
-            let deltaX = (event.offsetX - mouseDownEvent.offsetX) / scale;
-            let deltaY = (event.offsetY - mouseDownEvent.offsetY) / scale;
-            viewTranslateX = oldViewTranslateX + deltaX;
-            viewTranslateY = oldViewTranslateY + deltaY;
-            setViewTransform();
+        // generate a bunch of zoom steps for zooming smoothly, this uses a
+        // quadratic curve for a perceptually linear progression. The values are
+        // scaled so that we start with a zoom factor at exactly 1.0
+        let rangeMin = 0.0125;
+        let rangeMax = 2.0;
+        let steps = 40;
+        let viewScale1 = Math.round (Math.sqrt ((1 - rangeMin) / rangeMax) * steps);
+        let viewScaleNormalizer = viewScale1 / steps;
+        viewScaleNormalizer = rangeMin + ((viewScaleNormalizer * viewScaleNormalizer) * rangeMax)
+        let viewScales = [];
+        for (let i = 0; i <= steps; ++i) {
+            let delta = i / steps;
+            let viewScale = (rangeMin + ((delta * delta) * rangeMax)) / viewScaleNormalizer;
+            viewScales.push (viewScale);
         }
+
+        _.init = function (parameters) {
+            this.view = parameters.view;
+            this.rootScale = parameters.rootScale;
+            this.x = 0;
+            this.y = 0;
+            this.si = viewScale1;
+            this.mouseDownEvent = null;
+            return this;
+        };
+
+        _.setTransform = function () {
+            this.view.setAttribute ("transform", "translate(" + this.x + "," + this.y + ") scale(" + viewScales[this.si] + ")");
+        };
+
+        _.handleSvgMouseDown = function (event) {
+            this.mouseDownEvent = event;
+            this.oldX = this.x;
+            this.oldY = this.y;
+            //console.log ("down");
+        };
+
+        _.handleSvgMouseUp = function (event) {
+            this.mouseDownEvent = null;
+            //console.log ("up");
+        };
+
+        _.handleSvgMouseMove = function (event) {
+            if (this.mouseDownEvent !== null) {
+                //console.log ("move");
+                this.x = this.oldX + ((event.offsetX - this.mouseDownEvent.offsetX) / this.rootScale);
+                this.y = this.oldY + ((event.offsetY - this.mouseDownEvent.offsetY) / this.rootScale);
+                this.setTransform ();
+            }
+        };
+
+        _.handleSvgWheel = function (event) {
+            //console.log ("wheel");
+            this.si = Math.max (0, Math.min (viewScales.length - 1, this.si + (event.wheelDeltaY / Math.abs (event.wheelDeltaY))));
+            this.setTransform ();
+        };
+
+        return _;
+    } ();
+
+
+    let addSvg = function (parent) {
+        let svgRoot = Bedrock.Html.Builder
+            .begin ("http://www.w3.org/2000/svg;svg", {
+                id: parent.id + "-svg-root",
+                attributes: {
+                    onmousedown: "this.svgTransformer.handleSvgMouseDown (event);" ,
+                    onmouseup: "this.svgTransformer.handleSvgMouseUp (event);",
+                    onmousemove: "this.svgTransformer.handleSvgMouseMove (event);",
+                    onwheel: "this.svgTransformer.handleSvgWheel (event);",
+                    width: "100%",
+                    height: "100%",
+                }
+            })
+
+            .begin ("http://www.w3.org/2000/svg;g", { id: parent.id + "-root-g" })
+            .add ("http://www.w3.org/2000/svg;g", { id: parent.id + "-view-g" })
+            .end ()
+            .end ();
+        parent.appendChild (svgRoot);
+
+        let rootG = document.getElementById (parent.id + "-root-g");
+        let viewG = document.getElementById (parent.id + "-view-g");
+        let clientG = Bedrock.Html.Builder.add ("http://www.w3.org/2000/svg;g");
+        viewG.appendChild(clientG);
+
+        let bound = svgRoot.getBoundingClientRect ();
+        let scale = Math.min (bound.width, bound.height);
+        let translateX = bound.width / (2 * scale);
+        let translateY = bound.height / (2 * scale);
+        rootG.setAttribute ("transform", "scale(" + scale + ") translate(" + translateX + "," + translateY + ")");
+
+        // create a transformer object to manipulate the view
+        svgRoot.svgTransformer = SvgTransformer.new ({ view: viewG, rootScale: scale });
+        return clientG;
     };
 
-    let handleSvgWheel = function (event) {
-        console.log ("wheel");
-        viewScaleIndex = Math.max (0, Math.min (viewScales.length - 1, viewScaleIndex + (event.wheelDeltaY / Math.abs(event.wheelDeltaY))));
-        setViewTransform();
-    };
+    let body = document.getElementsByTagName("body")[0];
+    let svgClient = addSvg(body);
+
+    svgClient.appendChild(Bedrock.Html.Builder
+        .add ("http://www.w3.org/2000/svg;circle", {
+            attributes: {
+                cx: "0",
+                cy: "0",
+                r: "0.5",
+                stroke: "black",
+                "stroke-width": "0.1",
+                fill: "yellow"
+            }
+        })
+    );
 </script>
