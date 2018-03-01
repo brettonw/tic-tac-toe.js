@@ -1,4 +1,3 @@
-<!doctype html>
 <html>
 <head>
     <meta charset="UTF-8">
@@ -18,7 +17,6 @@
 <script src="src/test/js/tic-tac-toe.js"></script>
 
 <script>
-
     let SvgTransformer = function () {
         let _ = Object.create(Bedrock.Base);
 
@@ -67,8 +65,8 @@
         _.handleSvgMouseMove = function (event) {
             if (this.mouseDownEvent !== null) {
                 //console.log ("move");
-                this.x = this.oldX + ((event.offsetX - this.mouseDownEvent.offsetX) / this.rootScale);
-                this.y = this.oldY + ((event.offsetY - this.mouseDownEvent.offsetY) / this.rootScale);
+                this.x = this.oldX + ((event.clientX - this.mouseDownEvent.clientX) / this.rootScale);
+                this.y = this.oldY + ((event.clientY - this.mouseDownEvent.clientY) / this.rootScale);
                 this.setTransform ();
             }
         };
@@ -77,8 +75,10 @@
         _.handleSvgWheel = function (event) {
             if (this.enabled == true) {
                 this.enabled = false;
-                //console.log ("wheel");
-                this.si = Math.max (0, Math.min (viewScales.length - 1, this.si + (event.wheelDeltaY / Math.abs (event.wheelDeltaY))));
+                // chrome and firefox have got to be different...
+                let deltaY = (event.wheelDeltaY !== undefined) ? event.wheelDeltaY : -event.deltaY;
+                console.log ("wheel - " + deltaY);
+                this.si = Math.max (0, Math.min (viewScales.length - 1, this.si + (deltaY / Math.abs (deltaY))));
                 this.setTransform ();
 
                 let that = this;
@@ -98,24 +98,37 @@
             .begin ("http://www.w3.org/2000/svg;svg", {
                 id: parent.id + "-svg-root",
                 attributes: {
-                    onmousedown: "this.svgTransformer.handleSvgMouseDown (event);" ,
-                    onmouseup: "this.svgTransformer.handleSvgMouseUp (event);",
-                    onmousemove: "this.svgTransformer.handleSvgMouseMove (event);",
-                    onwheel: "this.svgTransformer.handleSvgWheel (event);",
+                    //onmousedown: "this.svgTransformer.handleSvgMouseDown (event);",
+                    //onmouseup: "this.svgTransformer.handleSvgMouseUp (event);",
+                    //onmousemove: "this.svgTransformer.handleSvgMouseMove (event);",
+                    //onwheel: "this.svgTransformer.handleSvgWheel (event);",
                     width: "100%",
-                    height: "100%",
+                    height: "100%"
                 }
             })
 
             .begin ("http://www.w3.org/2000/svg;g", { id: parent.id + "-root-g" })
-            .add ("http://www.w3.org/2000/svg;g", { id: parent.id + "-view-g" })
+            .begin ("http://www.w3.org/2000/svg;g", { id: parent.id + "-view-g" })
+            .add ("http://www.w3.org/2000/svg;g", {
+                id: parent.id + "-client-g",
+                attribute: {
+                    transform: "scale (1, -1)"
+                }
+            })
+            .end ()
             .end ()
             .end ();
         parent.appendChild (svgRoot);
 
+        // add event handlers
+        svgRoot.addEventListener("mousedown", function (event) { this.svgTransformer.handleSvgMouseDown (event); }, false);
+        svgRoot.addEventListener("mouseup", function (event) { this.svgTransformer.handleSvgMouseUp (event); }, false);
+        svgRoot.addEventListener("mousemove", function (event) { this.svgTransformer.handleSvgMouseMove (event); }, false);
+        svgRoot.addEventListener("wheel", function (event) { this.svgTransformer.handleSvgWheel (event); }, false);
+
         let rootG = document.getElementById (parent.id + "-root-g");
         let viewG = document.getElementById (parent.id + "-view-g");
-        let clientG = Bedrock.Html.Builder.add ("http://www.w3.org/2000/svg;g", { attribute: { transform: "scale (1, -1)"} });
+        let clientG = document.getElementById (parent.id + "-client-g");
         viewG.appendChild(clientG);
 
         let bound = svgRoot.getBoundingClientRect ();
