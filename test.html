@@ -27,7 +27,7 @@
         // scaled so that we start with a zoom factor at exactly 1.0
         let rangeMin = 0.0125;
         let rangeMax = 2.0;
-        let steps = 40;
+        let steps = 64;
         let viewScale1 = Math.round (Math.sqrt ((1 - rangeMin) / rangeMax) * steps);
         let viewScaleNormalizer = viewScale1 / steps;
         viewScaleNormalizer = rangeMin + ((viewScaleNormalizer * viewScaleNormalizer) * rangeMax)
@@ -73,10 +73,20 @@
             }
         };
 
+        _.enabled = true;
         _.handleSvgWheel = function (event) {
-            //console.log ("wheel");
-            this.si = Math.max (0, Math.min (viewScales.length - 1, this.si + (event.wheelDeltaY / Math.abs (event.wheelDeltaY))));
-            this.setTransform ();
+            if (this.enabled == true) {
+                this.enabled = false;
+                //console.log ("wheel");
+                this.si = Math.max (0, Math.min (viewScales.length - 1, this.si + (event.wheelDeltaY / Math.abs (event.wheelDeltaY))));
+                this.setTransform ();
+
+                let that = this;
+                setTimeout (function () {
+                    that.enabled = true;
+                }, 1000/50);
+            }
+            return false;
         };
 
         return _;
@@ -105,17 +115,17 @@
 
         let rootG = document.getElementById (parent.id + "-root-g");
         let viewG = document.getElementById (parent.id + "-view-g");
-        let clientG = Bedrock.Html.Builder.add ("http://www.w3.org/2000/svg;g");
+        let clientG = Bedrock.Html.Builder.add ("http://www.w3.org/2000/svg;g", { attribute: { transform: "scale (1, -1)"} });
         viewG.appendChild(clientG);
 
         let bound = svgRoot.getBoundingClientRect ();
-        let scale = Math.min (bound.width, bound.height);
-        let translateX = bound.width / (2 * scale);
-        let translateY = bound.height / (2 * scale);
-        rootG.setAttribute ("transform", "scale(" + scale + ") translate(" + translateX + "," + translateY + ")");
+        let rootScale = Math.min (bound.width, bound.height);
+        let translateX = bound.width / (2 * rootScale);
+        let translateY = bound.height / (2 * rootScale);
+        rootG.setAttribute ("transform", "scale(" + rootScale + ") translate(" + translateX + "," + translateY + ")");
 
         // create a transformer object to manipulate the view
-        svgRoot.svgTransformer = SvgTransformer.new ({ view: viewG, rootScale: scale });
+        svgRoot.svgTransformer = SvgTransformer.new ({ view: viewG, rootScale: rootScale });
         return clientG;
     };
 
