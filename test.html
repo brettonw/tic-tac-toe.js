@@ -6,7 +6,7 @@
     <link rel="stylesheet" href="test.css" />
     <title>Tic-Tac-Toe</title>
 </head>
-<body id="body">
+<body id="parent">
 </body>
 </html>
 
@@ -17,6 +17,8 @@
 <script src="src/test/js/tic-tac-toe.js"></script>
 
 <script>
+    let Builder = Bedrock.Html.Builder;
+
     let SvgTransformer = function () {
         let _ = Object.create(Bedrock.Base);
 
@@ -25,7 +27,7 @@
         // scaled so that we start with a zoom factor at exactly 1.0
         let rangeMin = 0.0125;
         let rangeMax = 2.0;
-        let steps = 64;
+        let steps = 33;
         let viewScale1 = Math.round (Math.sqrt ((1 - rangeMin) / rangeMax) * steps);
         let viewScaleNormalizer = viewScale1 / steps;
         viewScaleNormalizer = rangeMin + ((viewScaleNormalizer * viewScaleNormalizer) * rangeMax)
@@ -37,6 +39,7 @@
         }
 
         _.init = function (parameters) {
+            this.parentId = parameters.parentId;
             this.view = parameters.view;
             this.rootScale = parameters.rootScale;
             this.x = 0;
@@ -48,23 +51,24 @@
 
         _.setTransform = function () {
             this.view.setAttribute ("transform", "translate(" + this.x + "," + this.y + ") scale(" + viewScales[this.si] + ")");
+            document.getElementById(this.parentId + "-zoom-div").innerText = viewScales[this.si].toFixed (4) + "X";
         };
 
         _.handleSvgMouseDown = function (event) {
             this.mouseDownEvent = event;
             this.oldX = this.x;
             this.oldY = this.y;
-            //console.log ("down");
+            console.log ("down");
         };
 
         _.handleSvgMouseUp = function (event) {
             this.mouseDownEvent = null;
-            //console.log ("up");
+            console.log ("up");
         };
 
         _.handleSvgMouseMove = function (event) {
             if (this.mouseDownEvent !== null) {
-                //console.log ("move");
+                console.log ("move");
                 this.x = this.oldX + ((event.clientX - this.mouseDownEvent.clientX) / this.rootScale);
                 this.y = this.oldY + ((event.clientY - this.mouseDownEvent.clientY) / this.rootScale);
                 this.setTransform ();
@@ -94,31 +98,34 @@
 
 
     let addSvg = function (parent) {
-        let svgRoot = Bedrock.Html.Builder
+        let fixedUpperLeft = { position: "absolute", top: 0, left: 0 };
+        let divRoot = Builder
+            .begin ("div", { style: { position: "relative", width: "100%", height: "100%" } })
             .begin ("http://www.w3.org/2000/svg;svg", {
                 id: parent.id + "-svg-root",
-                attributes: {
-                    //onmousedown: "this.svgTransformer.handleSvgMouseDown (event);",
-                    //onmouseup: "this.svgTransformer.handleSvgMouseUp (event);",
-                    //onmousemove: "this.svgTransformer.handleSvgMouseMove (event);",
-                    //onwheel: "this.svgTransformer.handleSvgWheel (event);",
-                    width: "100%",
-                    height: "100%"
-                }
+                attributes: { width: "100%", height: "100%" },
+                style: fixedUpperLeft
             })
-
             .begin ("http://www.w3.org/2000/svg;g", { id: parent.id + "-root-g" })
             .begin ("http://www.w3.org/2000/svg;g", { id: parent.id + "-view-g" })
             .add ("http://www.w3.org/2000/svg;g", {
                 id: parent.id + "-client-g",
-                attribute: {
-                    transform: "scale (1, -1)"
-                }
+                attribute: { transform: "scale (1, -1)" }
             })
             .end ()
             .end ()
+            .end ()
+            .begin("div", { style: fixedUpperLeft })
+            .add ("div", { id: parent.id + "-zoom-div", style: { padding: "1px 3px" } })
+            .end ()
             .end ();
-        parent.appendChild (svgRoot);
+        parent.appendChild (divRoot);
+
+        let svgRoot = document.getElementById (parent.id + "-svg-root");
+        let rootG = document.getElementById (parent.id + "-root-g");
+        let viewG = document.getElementById (parent.id + "-view-g");
+        let clientG = document.getElementById (parent.id + "-client-g");
+        viewG.appendChild(clientG);
 
         // add event handlers
         svgRoot.addEventListener("mousedown", function (event) { this.svgTransformer.handleSvgMouseDown (event); }, false);
@@ -126,11 +133,7 @@
         svgRoot.addEventListener("mousemove", function (event) { this.svgTransformer.handleSvgMouseMove (event); }, false);
         svgRoot.addEventListener("wheel", function (event) { this.svgTransformer.handleSvgWheel (event); }, false);
 
-        let rootG = document.getElementById (parent.id + "-root-g");
-        let viewG = document.getElementById (parent.id + "-view-g");
-        let clientG = document.getElementById (parent.id + "-client-g");
-        viewG.appendChild(clientG);
-
+        // set up the view scales
         let bound = svgRoot.getBoundingClientRect ();
         let rootScale = Math.min (bound.width, bound.height);
         let translateX = bound.width / (2 * rootScale);
@@ -138,23 +141,105 @@
         rootG.setAttribute ("transform", "scale(" + rootScale + ") translate(" + translateX + "," + translateY + ")");
 
         // create a transformer object to manipulate the view
-        svgRoot.svgTransformer = SvgTransformer.new ({ view: viewG, rootScale: rootScale });
+        svgRoot.svgTransformer = SvgTransformer.new ({ parentId: parent.id, view: viewG, rootScale: rootScale });
+        svgRoot.svgTransformer.setTransform();
         return clientG;
     };
 
-    let body = document.getElementsByTagName("body")[0];
-    let svgClient = addSvg(body);
+    let parent = document.getElementById("parent");
+    let svgClient = addSvg(parent);
 
-    svgClient.appendChild(Bedrock.Html.Builder
+    let makeLine = function (container, a, b, color, alpha, width) {
+        container.appendChild(Builder
+            .add ("http://www.w3.org/2000/svg;line", {
+                attributes: {
+                    "x1": a.x, "y1": a.y,
+                    "x2": b.x, "y2": b.y,
+                    "stroke": color,
+                    "opacity": alpha,
+                    "stroke-width": width
+                }
+            }));
+    };
+
+    // make graph paper, 100x100 grid
+    let gridG = Builder.add ("http://www.w3.org/2000/svg;g");
+    let gridAlpha = 0.25;
+    let gridWeight = 0.0025;
+    makeLine (gridG, {x: -1, y: 0}, {x: 1, y: 0}, "#00f", gridAlpha * 2, gridWeight * 2);
+    makeLine (gridG, {x: 0, y: -1}, {x: 0, y: 1}, "#00f", gridAlpha * 2, gridWeight * 2);
+    let gridSize = 50;
+    for (let i = 1; i <= gridSize; ++i) {
+        let val = i / gridSize;
+        makeLine (gridG, {x: -1, y: val}, {x: 1, y: val}, "#08f", gridAlpha, gridWeight);
+        makeLine (gridG, {x: -1, y: -val}, {x: 1, y: -val}, "#08f", gridAlpha, gridWeight);
+        makeLine (gridG, {x: val, y: -1}, {x: val, y: 1}, "#08f", gridAlpha, gridWeight);
+        makeLine (gridG, {x: -val, y: -1}, {x: -val, y: 1}, "#08f", gridAlpha, gridWeight);
+    }
+    svgClient.appendChild(gridG);
+
+    let drawX = function (container, scale, move) {
+        let xG = Builder.add ("http://www.w3.org/2000/svg;g", { attribute: {
+                transform: "translate(" + (move.x () / 3) + "," + (move.y () / 3) + ") scale (" + (1 / 3) + ")"
+            } });
+        // draw an x
+        makeLine (xG, { x: 0.25, y: 0.25 }, { x: 0.75, y: 0.75 }, "red", 1.0, 0.1);
+        makeLine (xG, { x: 0.25, y: 0.75 }, { x: 0.75, y: 0.25 }, "red", 1.0, 0.1);
+        container.appendChild (xG);
+    };
+
+    let drawO = function (container, scale, location) {
+
+    };
+
+    let drawBoard = function (container, board, scale, location) {
+        let boardG = Builder.add ("http://www.w3.org/2000/svg;g", { attribute: {
+            transform: "translate(" + location.x + "," + location.y + ") scale (" + scale + ")"
+        } });
+        makeLine (boardG, { x: 0, y: 0.333 }, { x: 1, y: 0.333 }, "black", 1.0, 0.05);
+        makeLine (boardG, { x: 0, y: 0.667 }, { x: 1, y: 0.667 }, "black", 1.0, 0.05);
+        makeLine (boardG, { x: 0.333, y: 0 }, { x: 0.333, y: 1 }, "black", 1.0, 0.05);
+        makeLine (boardG, { x: 0.667, y: 0 }, { x: 0.667, y: 1 }, "black", 1.0, 0.05);
+
+        // now add the board positions
+        /*
+        for (let row = 0; row < Board.DIMENSION; ++row) {
+            for (let col = 0; col < Board.DIMENSION; ++col) {
+                let move = Move.get (col, row);
+                let player = board.getPlayer (move);
+                switch (player) {
+                    case Player.X:
+                        drawX (boardG, scale, { x: col, y: row });
+                        break;
+                    case Player.O:
+                        drawO (boardG, scale, { x: col, y: row });
+                        break;
+                    default:
+                        break;
+                }
+            }
+        }
+        */
+        drawX (boardG, scale, Move.M02);
+
+        container.appendChild (boardG);
+    };
+
+    drawBoard (svgClient, null, 0.25, { x: 0.25, y: 0.25 });
+
+    /*
+    svgClient.appendChild(Builder
         .add ("http://www.w3.org/2000/svg;circle", {
             attributes: {
-                cx: "0",
-                cy: "0",
-                r: "0.5",
-                stroke: "black",
-                "stroke-width": "0.1",
-                fill: "yellow"
+                "cx": 0, "cy": 0,
+                "r": 0.5,
+                "stroke": "black",
+                "stroke-width": 0.1,
+                "fill": "yellow"
             }
         })
     );
+    */
+
+
 </script>
