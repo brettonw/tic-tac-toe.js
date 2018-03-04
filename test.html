@@ -165,16 +165,28 @@
             }));
     };
 
-    let makePerturbedPath = function (container, points, color, alpha, width, perturbDelta) {
-        // randomly perturb each of the points
+    let drawPath = function (container, points, color, alpha, width) {
         let lastPos = points[0];
         for (let i = 1; i < points.length; ++i) {
             let pos = points[i];
-            pos.x += ((Math.random () * 2) - 1) * perturbDelta;
-            pos.y += ((Math.random () * 2) - 1) * perturbDelta;
             makeLine (container, lastPos, pos, color, alpha, width);
             lastPos = pos;
         }
+    };
+
+    let makePerturbedPath = function (container, points, color, alpha, width, perturbDelta) {
+        let perturbPoint = function (pt) {
+            return {
+                x: pt.x + (((Math.random () * 2) - 1) * perturbDelta),
+                y:pt.y + (((Math.random () * 2) - 1) * perturbDelta)
+            };
+        };
+        // randomly perturb each of the points
+        let perturbedPoints = [];
+        for (let point of points) {
+            perturbedPoints.push (perturbPoint(point));
+        }
+        drawPath(container, perturbedPoints, color, alpha, width);
     };
 
     let makeWiggleLine= function (container, a, b, color, alpha, width, perturbDelta, parts) {
@@ -219,25 +231,27 @@
 
     let drawX = function (container, scale, move) {
         drawMove (container, scale, move, function (xG) {
-            makeWiggleLine (xG, { x: 0.25, y: 0.25 }, { x: 0.75, y: 0.75 }, "red", 1.0, 0.1, 0.02, 4);
-            makeWiggleLine (xG, { x: 0.25, y: 0.75 }, { x: 0.75, y: 0.25 }, "red", 1.0, 0.1, 0.02, 4);
+            makeWiggleLine (xG, { x: 0.25, y: 0.25 }, { x: 0.75, y: 0.75 }, "red", 1.0, 0.075, 0.025, 4);
+            makeWiggleLine (xG, { x: 0.25, y: 0.75 }, { x: 0.75, y: 0.25 }, "red", 1.0, 0.075, 0.025, 4);
 
         });
     };
 
+    Math.TWO_PI = Math.PI * 2;
     let drawO = function (container, scale, move) {
         drawMove (container, scale, move, function (xG) {
             let posFromAngle = function (angle) {
                 return { x: (Math.cos(angle) / 4) + 0.5, y: (Math.sin (angle) / 4) + 0.5 };
             };
             let segmentCount = 14;
-            let segmentAngle = (Math.PI * 2) / segmentCount;
-            let lastPos = posFromAngle(0);
-            for (let i = 1; i <= segmentCount; ++i) {
-                let pos = posFromAngle(segmentAngle * (i % segmentCount));
-                makeLine (xG, lastPos, pos, "red", 1.0, 0.1);
-                lastPos = pos;
+            let segmentAngle = Math.TWO_PI / segmentCount;
+            let startAngle = Math.TWO_PI * Math.random();
+            let points = [];
+            for (let i = 0; i <= segmentCount; ++i) {
+                let pos = posFromAngle(startAngle + (segmentAngle * (i % segmentCount)));
+                points.push (pos);
             }
+            makePerturbedPath (xG, points, "red", 1.0, 0.075, 0.02);
         });
     };
 
@@ -245,10 +259,10 @@
         let boardG = Builder.add ("http://www.w3.org/2000/svg;g", { attribute: {
             transform: "translate(" + location.x + "," + location.y + ") scale (" + scale + ")"
         } });
-        makeWiggleLine (boardG, { x: 0, y: 0.333 }, { x: 1, y: 0.333 }, "black", 1.0, 0.05, 0.015, 8);
-        makeWiggleLine (boardG, { x: 0, y: 0.667 }, { x: 1, y: 0.667 }, "black", 1.0, 0.05, 0.015, 8);
-        makeWiggleLine (boardG, { x: 0.333, y: 0 }, { x: 0.333, y: 1 }, "black", 1.0, 0.05, 0.015, 8);
-        makeWiggleLine (boardG, { x: 0.667, y: 0 }, { x: 0.667, y: 1 }, "black", 1.0, 0.05, 0.015, 8);
+        makeWiggleLine (boardG, { x: 0, y: 0.333 }, { x: 1, y: 0.333 }, "black", 1.0, 0.05, 0.02, 8);
+        makeWiggleLine (boardG, { x: 0, y: 0.667 }, { x: 1, y: 0.667 }, "black", 1.0, 0.05, 0.02, 8);
+        makeWiggleLine (boardG, { x: 0.333, y: 0 }, { x: 0.333, y: 1 }, "black", 1.0, 0.05, 0.02, 8);
+        makeWiggleLine (boardG, { x: 0.667, y: 0 }, { x: 0.667, y: 1 }, "black", 1.0, 0.05, 0.02, 8);
 
         // now add the board positions
         for (let row = 0; row < Board.DIMENSION; ++row) {
