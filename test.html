@@ -82,7 +82,7 @@
                 // chrome and firefox have got to be different...
                 let deltaY = (event.wheelDeltaY !== undefined) ? event.wheelDeltaY : -event.deltaY;
                 if (Math.abs (deltaY) > 0) {
-                    console.log ("wheel - " + deltaY);
+                    //console.log ("wheel - " + deltaY);
                     this.si = Math.max (0, Math.min (viewScales.length - 1, this.si + (deltaY / Math.abs (deltaY))));
                     this.setTransform ();
                 }
@@ -165,6 +165,33 @@
             }));
     };
 
+    let makePerturbedPath = function (container, points, color, alpha, width, perturbDelta) {
+        // randomly perturb each of the points
+        let lastPos = points[0];
+        for (let i = 1; i < points.length; ++i) {
+            let pos = points[i];
+            pos.x += ((Math.random () * 2) - 1) * perturbDelta;
+            pos.y += ((Math.random () * 2) - 1) * perturbDelta;
+            makeLine (container, lastPos, pos, color, alpha, width);
+            lastPos = pos;
+        }
+    };
+
+    let makeWiggleLine= function (container, a, b, color, alpha, width, perturbDelta, parts) {
+        // split the line into parts
+        let delta = { x: b.x - a.x, y: b.y - a.y };
+        let deltaLength = Math.sqrt ((delta.x * delta.x) + (delta.y * delta.y));
+        let points = [a];
+
+        for (let i = 1; i < parts; ++i) {
+            let d = deltaLength * (i / parts);
+            let point = { x: a.x + (d * delta.x), y: a.y + (d * delta.y)};
+            points.push(point);
+        }
+        points.push(b);
+        makePerturbedPath(container, points, color, alpha, width, perturbDelta);
+    };
+
     // make graph paper, 100x100 grid
     let gridG = Builder.add ("http://www.w3.org/2000/svg;g");
     let gridAlpha = 0.25;
@@ -179,7 +206,7 @@
         makeLine (gridG, {x: val, y: -1}, {x: val, y: 1}, "#08f", gridAlpha, gridWeight);
         makeLine (gridG, {x: -val, y: -1}, {x: -val, y: 1}, "#08f", gridAlpha, gridWeight);
     }
-    svgClient.appendChild(gridG);
+    //svgClient.appendChild(gridG);
 
     let drawMove = function (container, scale, move, drawInto) {
         let y = (Board.DIMENSION - 1) - move.y ();
@@ -192,8 +219,8 @@
 
     let drawX = function (container, scale, move) {
         drawMove (container, scale, move, function (xG) {
-            makeLine (xG, { x: 0.25, y: 0.25 }, { x: 0.75, y: 0.75 }, "red", 1.0, 0.1);
-            makeLine (xG, { x: 0.25, y: 0.75 }, { x: 0.75, y: 0.25 }, "red", 1.0, 0.1);
+            makeWiggleLine (xG, { x: 0.25, y: 0.25 }, { x: 0.75, y: 0.75 }, "red", 1.0, 0.1, 0.02, 4);
+            makeWiggleLine (xG, { x: 0.25, y: 0.75 }, { x: 0.75, y: 0.25 }, "red", 1.0, 0.1, 0.02, 4);
 
         });
     };
@@ -206,8 +233,8 @@
             let segmentCount = 14;
             let segmentAngle = (Math.PI * 2) / segmentCount;
             let lastPos = posFromAngle(0);
-            for (let i = 1; i < segmentCount; ++i) {
-                let pos = posFromAngle(segmentAngle * i);
+            for (let i = 1; i <= segmentCount; ++i) {
+                let pos = posFromAngle(segmentAngle * (i % segmentCount));
                 makeLine (xG, lastPos, pos, "red", 1.0, 0.1);
                 lastPos = pos;
             }
@@ -218,10 +245,10 @@
         let boardG = Builder.add ("http://www.w3.org/2000/svg;g", { attribute: {
             transform: "translate(" + location.x + "," + location.y + ") scale (" + scale + ")"
         } });
-        makeLine (boardG, { x: 0, y: 0.333 }, { x: 1, y: 0.333 }, "black", 1.0, 0.05);
-        makeLine (boardG, { x: 0, y: 0.667 }, { x: 1, y: 0.667 }, "black", 1.0, 0.05);
-        makeLine (boardG, { x: 0.333, y: 0 }, { x: 0.333, y: 1 }, "black", 1.0, 0.05);
-        makeLine (boardG, { x: 0.667, y: 0 }, { x: 0.667, y: 1 }, "black", 1.0, 0.05);
+        makeWiggleLine (boardG, { x: 0, y: 0.333 }, { x: 1, y: 0.333 }, "black", 1.0, 0.05, 0.015, 8);
+        makeWiggleLine (boardG, { x: 0, y: 0.667 }, { x: 1, y: 0.667 }, "black", 1.0, 0.05, 0.015, 8);
+        makeWiggleLine (boardG, { x: 0.333, y: 0 }, { x: 0.333, y: 1 }, "black", 1.0, 0.05, 0.015, 8);
+        makeWiggleLine (boardG, { x: 0.667, y: 0 }, { x: 0.667, y: 1 }, "black", 1.0, 0.05, 0.015, 8);
 
         // now add the board positions
         for (let row = 0; row < Board.DIMENSION; ++row) {
