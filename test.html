@@ -81,14 +81,16 @@
                 this.enabled = false;
                 // chrome and firefox have got to be different...
                 let deltaY = (event.wheelDeltaY !== undefined) ? event.wheelDeltaY : -event.deltaY;
-                console.log ("wheel - " + deltaY);
-                this.si = Math.max (0, Math.min (viewScales.length - 1, this.si + (deltaY / Math.abs (deltaY))));
-                this.setTransform ();
+                if (Math.abs (deltaY) > 0) {
+                    console.log ("wheel - " + deltaY);
+                    this.si = Math.max (0, Math.min (viewScales.length - 1, this.si + (deltaY / Math.abs (deltaY))));
+                    this.setTransform ();
+                }
 
                 let that = this;
                 setTimeout (function () {
                     that.enabled = true;
-                }, 1000/50);
+                }, 1000 / 60);
             }
             return false;
         };
@@ -157,7 +159,8 @@
                     "x2": b.x, "y2": b.y,
                     "stroke": color,
                     "opacity": alpha,
-                    "stroke-width": width
+                    "stroke-width": width,
+                    "stroke-linecap":"round"
                 }
             }));
     };
@@ -178,18 +181,37 @@
     }
     svgClient.appendChild(gridG);
 
-    let drawX = function (container, scale, move) {
+    let drawMove = function (container, scale, move, drawInto) {
+        let y = (Board.DIMENSION - 1) - move.y ();
         let xG = Builder.add ("http://www.w3.org/2000/svg;g", { attribute: {
-                transform: "translate(" + (move.x () / 3) + "," + (move.y () / 3) + ") scale (" + (1 / 3) + ")"
+                transform: "translate(" + (move.x () / 3) + "," + (y / 3) + ") scale (" + (1 / 3) + ")"
             } });
-        // draw an x
-        makeLine (xG, { x: 0.25, y: 0.25 }, { x: 0.75, y: 0.75 }, "red", 1.0, 0.1);
-        makeLine (xG, { x: 0.25, y: 0.75 }, { x: 0.75, y: 0.25 }, "red", 1.0, 0.1);
+        drawInto (xG);
         container.appendChild (xG);
     };
 
-    let drawO = function (container, scale, location) {
+    let drawX = function (container, scale, move) {
+        drawMove (container, scale, move, function (xG) {
+            makeLine (xG, { x: 0.25, y: 0.25 }, { x: 0.75, y: 0.75 }, "red", 1.0, 0.1);
+            makeLine (xG, { x: 0.25, y: 0.75 }, { x: 0.75, y: 0.25 }, "red", 1.0, 0.1);
 
+        });
+    };
+
+    let drawO = function (container, scale, move) {
+        drawMove (container, scale, move, function (xG) {
+            let posFromAngle = function (angle) {
+                return { x: (Math.cos(angle) / 4) + 0.5, y: (Math.sin (angle) / 4) + 0.5 };
+            };
+            let segmentCount = 14;
+            let segmentAngle = (Math.PI * 2) / segmentCount;
+            let lastPos = posFromAngle(0);
+            for (let i = 1; i < segmentCount; ++i) {
+                let pos = posFromAngle(segmentAngle * i);
+                makeLine (xG, lastPos, pos, "red", 1.0, 0.1);
+                lastPos = pos;
+            }
+        });
     };
 
     let drawBoard = function (container, board, scale, location) {
@@ -202,30 +224,35 @@
         makeLine (boardG, { x: 0.667, y: 0 }, { x: 0.667, y: 1 }, "black", 1.0, 0.05);
 
         // now add the board positions
-        /*
         for (let row = 0; row < Board.DIMENSION; ++row) {
             for (let col = 0; col < Board.DIMENSION; ++col) {
                 let move = Move.get (col, row);
                 let player = board.getPlayer (move);
                 switch (player) {
                     case Player.X:
-                        drawX (boardG, scale, { x: col, y: row });
+                        drawX (boardG, scale, move);
                         break;
                     case Player.O:
-                        drawO (boardG, scale, { x: col, y: row });
+                        drawO (boardG, scale, move);
                         break;
                     default:
                         break;
                 }
             }
         }
-        */
-        drawX (boardG, scale, Move.M02);
 
         container.appendChild (boardG);
     };
 
-    drawBoard (svgClient, null, 0.25, { x: 0.25, y: 0.25 });
+    let wins = Referee.getWins();
+    let halfWins = wins.length / 2;
+    let size = 0.15;
+    let spacingScale = 1.5;
+    let spacing = size * spacingScale;
+    for (let i = 0; i < halfWins; ++i) {
+        drawBoard (svgClient, Board.fromString (wins[i]), size, { x: -1 + (i * spacing), y: 0 });
+        drawBoard (svgClient, Board.fromString (wins[i + halfWins]), size, { x: -1 + (i *spacing), y: spacing });
+    }
 
     /*
     svgClient.appendChild(Builder
