@@ -25,9 +25,9 @@
         // generate a bunch of zoom steps for zooming smoothly, this uses a
         // quadratic curve for a perceptually linear progression. The values are
         // scaled so that we start with a zoom factor at exactly 1.0
-        let rangeMin = 0.0125;
-        let rangeMax = 2.0;
-        let steps = 33;
+        let rangeMin = 0.05;
+        let rangeMax = 8.0;
+        let steps = 64;
         let viewScale1 = Math.round (Math.sqrt ((1 - rangeMin) / rangeMax) * steps);
         let viewScaleNormalizer = viewScale1 / steps;
         viewScaleNormalizer = rangeMin + ((viewScaleNormalizer * viewScaleNormalizer) * rangeMax)
@@ -58,17 +58,17 @@
             this.mouseDownEvent = event;
             this.oldX = this.x;
             this.oldY = this.y;
-            console.log ("down");
+            //console.log ("down");
         };
 
         _.handleSvgMouseUp = function (event) {
             this.mouseDownEvent = null;
-            console.log ("up");
+            //console.log ("up");
         };
 
         _.handleSvgMouseMove = function (event) {
             if (this.mouseDownEvent !== null) {
-                console.log ("move");
+                //console.log ("move");
                 this.x = this.oldX + ((event.clientX - this.mouseDownEvent.clientX) / this.rootScale);
                 this.y = this.oldY + ((event.clientY - this.mouseDownEvent.clientY) / this.rootScale);
                 this.setTransform ();
@@ -101,8 +101,10 @@
 
     let addSvg = function (parent) {
         let fixedUpperLeft = { position: "absolute", top: 0, left: 0 };
+        //let backgroundColor = "#ddfaff";
+        let backgroundColor = "#fed";
         let divRoot = Builder
-            .begin ("div", { style: { position: "relative", width: "100%", height: "100%" } })
+            .begin ("div", { style: { position: "relative", width: "100%", height: "100%", background: backgroundColor } })
             .begin ("http://www.w3.org/2000/svg;svg", {
                 id: parent.id + "-svg-root",
                 attributes: { width: "100%", height: "100%" },
@@ -174,7 +176,50 @@
         }
     };
 
-    let makePerturbedPath = function (container, points, color, alpha, width, perturbDelta) {
+    let smoothPath = function (pointsIn, pass) {
+        // function to create a new point between b and c that splits the difference
+        let subdivideSegment = function (a, b, c, d) {
+            let halfStepLength = function (a, b) {
+                let d = { x: b.x - a.x, y: b.y - a.y };
+                return Math.sqrt((d.x * d.x) + (d.y * d.y));
+            };
+            let halfStep = function (a, b, scale) {
+                let d = halfStepLength(a, b);
+                return { x: b.x + (((b.x - a.x) / d) * scale), y: b.y + (((b.y - a.y) / d) * scale) };
+            };
+
+            let abLength = halfStepLength(a, b);
+            let dcLength = halfStepLength(d, c);
+            let scale = Math.min (abLength, dcLength) / 5;
+            let ab = halfStep(a, b, scale);
+            let dc = halfStep(d, c, scale);
+            return { x: (ab.x + dc.x) / 2, y: (ab.y + dc.y) / 2 };
+        };
+
+        // function to reflect b across a
+        let reflectPoint = function (a, b) {
+            return { x: a.x + (a.x - b.x), y: a.y + (a.y - b.y) };
+        };
+
+        // create a copy of the points we can manipulate
+        let points = pointsIn.slice(0);
+        let n = points.length - 1;
+        points.unshift(reflectPoint(points[0], points[1]));
+        points.push(reflectPoint(points[n], points[n - 1]));
+
+        let smoothedPoints = [];
+        for (let i = 1; i <= n; ++i) {
+            smoothedPoints.push (points[i]);
+            let newPoint = subdivideSegment(points[i - 1], points[i], points[i + 1], points[i + 2]);
+            smoothedPoints.push (newPoint);
+        }
+        smoothedPoints.push (points[n + 1]);
+
+        // keep going?
+        return (--pass > 0) ? smoothPath (smoothedPoints, pass) : smoothedPoints;
+    };
+
+    let perturbPath = function (points, perturbDelta) {
         let perturbPoint = function (pt) {
             return {
                 x: pt.x + (((Math.random () * 2) - 1) * perturbDelta),
@@ -186,7 +231,7 @@
         for (let point of points) {
             perturbedPoints.push (perturbPoint(point));
         }
-        drawPath(container, perturbedPoints, color, alpha, width);
+        return perturbedPoints;
     };
 
     let makeWiggleLine= function (container, a, b, color, alpha, width, perturbDelta, parts) {
@@ -201,12 +246,25 @@
             points.push(point);
         }
         points.push(b);
-        makePerturbedPath(container, points, color, alpha, width, perturbDelta);
+
+        //drawPath (container, points, "green", 0.5, width * 10);
+
+        points = perturbPath (points, perturbDelta);
+        //drawPath (container, points, "blue", 0.5, width * 8);
+
+        //points = smoothPath(points, 2);
+        //drawPath (container, points, "red", 0.5, width * 2);
+
+        //points = smoothPath(points, 2);
+        //drawPath (container, points, "black", 1.0, width / 2.0);
+
+        points = smoothPath(points, 4);
+        drawPath (container, points, color, alpha, width);
     };
 
     // make graph paper, 100x100 grid
     let gridG = Builder.add ("http://www.w3.org/2000/svg;g");
-    let gridAlpha = 0.25;
+    let gridAlpha = 0.1;
     let gridWeight = 0.0025;
     makeLine (gridG, {x: -1, y: 0}, {x: 1, y: 0}, "#00f", gridAlpha * 2, gridWeight * 2);
     makeLine (gridG, {x: 0, y: -1}, {x: 0, y: 1}, "#00f", gridAlpha * 2, gridWeight * 2);
@@ -218,32 +276,42 @@
         makeLine (gridG, {x: val, y: -1}, {x: val, y: 1}, "#08f", gridAlpha, gridWeight);
         makeLine (gridG, {x: -val, y: -1}, {x: -val, y: 1}, "#08f", gridAlpha, gridWeight);
     }
-    //svgClient.appendChild(gridG);
+    svgClient.appendChild(gridG);
 
     let drawMove = function (container, scale, move, drawInto) {
+        let offsetBase = 0.035;
+        let offset = {
+            x: ((Math.random() * 2) - 1) * offsetBase,
+            y: ((Math.random() * 2) - 1) * offsetBase
+        };
+        let scaleOffset = 3 + (((Math.random() * 2) - 1) * 0.1);
+        let rotate = ((Math.random() * 2) - 1) * 6; // degrees
+
         let y = (Board.DIMENSION - 1) - move.y ();
         let xG = Builder.add ("http://www.w3.org/2000/svg;g", { attribute: {
-                transform: "translate(" + (move.x () / 3) + "," + (y / 3) + ") scale (" + (1 / 3) + ")"
+                transform: "translate(" + ((move.x () + offset.x) / 3) + "," + ((y + offset.y) / 3) + ") scale (" + (1 / scaleOffset) + ") rotate (" + rotate + ")"
             } });
         drawInto (xG);
         container.appendChild (xG);
     };
 
     let drawX = function (container, scale, move) {
+        let xColor = "#fab";
         drawMove (container, scale, move, function (xG) {
-            makeWiggleLine (xG, { x: 0.25, y: 0.25 }, { x: 0.75, y: 0.75 }, "red", 1.0, 0.075, 0.025, 4);
-            makeWiggleLine (xG, { x: 0.25, y: 0.75 }, { x: 0.75, y: 0.25 }, "red", 1.0, 0.075, 0.025, 4);
+            makeWiggleLine (xG, { x: 0.25, y: 0.25 }, { x: 0.75, y: 0.75 }, xColor, 1.0, 0.075, 0.015, 3);
+            makeWiggleLine (xG, { x: 0.25, y: 0.75 }, { x: 0.75, y: 0.25 }, xColor, 1.0, 0.075, 0.015, 3);
 
         });
     };
 
     Math.TWO_PI = Math.PI * 2;
     let drawO = function (container, scale, move) {
+        let oColor = "#9af";
         drawMove (container, scale, move, function (xG) {
             let posFromAngle = function (angle) {
                 return { x: (Math.cos(angle) / 4) + 0.5, y: (Math.sin (angle) / 4) + 0.5 };
             };
-            let segmentCount = 14;
+            let segmentCount = 8;
             let segmentAngle = Math.TWO_PI / segmentCount;
             let startAngle = Math.TWO_PI * Math.random();
             let points = [];
@@ -251,18 +319,35 @@
                 let pos = posFromAngle(startAngle + (segmentAngle * (i % segmentCount)));
                 points.push (pos);
             }
-            makePerturbedPath (xG, points, "red", 1.0, 0.075, 0.02);
+
+            points = perturbPath (points, 0.005);
+            //points = smoothPath(points, 1);
+            //drawPath (xG, points, "red", 0.5, 0.1);
+
+            //points = smoothPath(points, 1);
+            //drawPath (xG, points, "blue", 1.0, 0.05);
+
+            //points = smoothPath(points, 1);
+            //drawPath (xG, points, "black", 1.0, 0.01);
+
+            points = smoothPath(points, 2);
+            drawPath (xG, points, oColor, 1.0, 0.075);
+
+            //makePerturbedPath (xG, points, "red", 1.0, 0.02, 0.01);
         });
     };
 
     let drawBoard = function (container, board, scale, location) {
+        let boardColor = "#3dB";
+        let boardWeight = 0.03;
+        let boardVariance = 0.01;
         let boardG = Builder.add ("http://www.w3.org/2000/svg;g", { attribute: {
             transform: "translate(" + location.x + "," + location.y + ") scale (" + scale + ")"
         } });
-        makeWiggleLine (boardG, { x: 0, y: 0.333 }, { x: 1, y: 0.333 }, "black", 1.0, 0.05, 0.02, 8);
-        makeWiggleLine (boardG, { x: 0, y: 0.667 }, { x: 1, y: 0.667 }, "black", 1.0, 0.05, 0.02, 8);
-        makeWiggleLine (boardG, { x: 0.333, y: 0 }, { x: 0.333, y: 1 }, "black", 1.0, 0.05, 0.02, 8);
-        makeWiggleLine (boardG, { x: 0.667, y: 0 }, { x: 0.667, y: 1 }, "black", 1.0, 0.05, 0.02, 8);
+        makeWiggleLine (boardG, { x: 0, y: 0.333 }, { x: 1, y: 0.333 }, boardColor, 1.0, boardWeight, boardVariance, 8);
+        makeWiggleLine (boardG, { x: 0, y: 0.667 }, { x: 1, y: 0.667 }, boardColor, 1.0, boardWeight, boardVariance, 8);
+        makeWiggleLine (boardG, { x: 0.333, y: 0 }, { x: 0.333, y: 1 }, boardColor, 1.0, boardWeight, boardVariance, 8);
+        makeWiggleLine (boardG, { x: 0.667, y: 0 }, { x: 0.667, y: 1 }, boardColor, 1.0, boardWeight, boardVariance, 8);
 
         // now add the board positions
         for (let row = 0; row < Board.DIMENSION; ++row) {
