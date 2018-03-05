@@ -25,7 +25,7 @@
         // generate a bunch of zoom steps for zooming smoothly, this uses a
         // quadratic curve for a perceptually linear progression. The values are
         // scaled so that we start with a zoom factor at exactly 1.0
-        let rangeMin = 0.05;
+        let rangeMin = 0.125;
         let rangeMax = 8.0;
         let steps = 64;
         let viewScale1 = Math.round (Math.sqrt ((1 - rangeMin) / rangeMax) * steps);
@@ -111,7 +111,7 @@
     let addSvg = function (parent) {
         let fixedUpperLeft = { position: "absolute", top: 0, left: 0 };
         //let backgroundColor = "#ddfaff";
-        let backgroundColor = "#fff8cc";
+        let backgroundColor = "#fff8dd";
         let divRoot = Builder
             .begin ("div", { style: { position: "relative", width: "100%", height: "100%", background: backgroundColor } })
             .begin ("http://www.w3.org/2000/svg;svg", {
@@ -285,7 +285,7 @@
         makeLine (gridG, {x: val, y: -1}, {x: val, y: 1}, "#08f", gridAlpha, gridWeight);
         makeLine (gridG, {x: -val, y: -1}, {x: -val, y: 1}, "#08f", gridAlpha, gridWeight);
     }
-    svgClient.appendChild(gridG);
+    //svgClient.appendChild(gridG);
 
     let drawMove = function (container, scale, move, drawInto) {
         let offsetBase = 0.035;
