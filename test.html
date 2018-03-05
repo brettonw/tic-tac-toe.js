@@ -162,7 +162,7 @@
     let parent = document.getElementById("parent");
     let svgClient = addSvg(parent);
 
-    let makeLine = function (container, a, b, color, alpha, width) {
+    let drawLine = function (container, a, b, color, alpha, width) {
         container.appendChild(Builder
             .add ("http://www.w3.org/2000/svg;line", {
                 attributes: {
@@ -177,12 +177,21 @@
     };
 
     let drawPath = function (container, points, color, alpha, width) {
-        let lastPos = points[0];
+        let path = "M " + points[0].x + " " + points[0].y + " ";
         for (let i = 1; i < points.length; ++i) {
-            let pos = points[i];
-            makeLine (container, lastPos, pos, color, alpha, width);
-            lastPos = pos;
+            path += "L " + points[i].x + " " + points[i].y + " ";
         }
+        container.appendChild (Builder
+            .add ("http://www.w3.org/2000/svg;path", {
+                attributes: {
+                    "d": path,
+                    "stroke": color,
+                    "opacity": alpha,
+                    "stroke-width": width,
+                    "stroke-linecap": "round",
+                    "fill": "transparent"
+                }
+            }));
     };
 
     let smoothPath = function (pointsIn, pass) {
@@ -243,7 +252,7 @@
         return perturbedPoints;
     };
 
-    let makeWiggleLine= function (container, a, b, color, alpha, width, perturbDelta, parts) {
+    let drawWiggleLine = function (container, a, b, color, alpha, width, perturbDelta, parts) {
         // split the line into parts
         let delta = { x: b.x - a.x, y: b.y - a.y };
         let deltaLength = Math.sqrt ((delta.x * delta.x) + (delta.y * delta.y));
@@ -256,18 +265,8 @@
         }
         points.push(b);
 
-        //drawPath (container, points, "green", 0.5, width * 10);
-
         points = perturbPath (points, perturbDelta);
-        //drawPath (container, points, "blue", 0.5, width * 8);
-
-        //points = smoothPath(points, 2);
-        //drawPath (container, points, "red", 0.5, width * 2);
-
-        //points = smoothPath(points, 2);
-        //drawPath (container, points, "black", 1.0, width / 2.0);
-
-        points = smoothPath(points, 4);
+        points = smoothPath(points, 2);
         drawPath (container, points, color, alpha, width);
     };
 
@@ -275,15 +274,15 @@
     let gridG = Builder.add ("http://www.w3.org/2000/svg;g");
     let gridAlpha = 0.1;
     let gridWeight = 0.002;
-    makeLine (gridG, {x: -1, y: 0}, {x: 1, y: 0}, "#00f", gridAlpha * 2, gridWeight * 2);
-    makeLine (gridG, {x: 0, y: -1}, {x: 0, y: 1}, "#00f", gridAlpha * 2, gridWeight * 2);
+    drawLine (gridG, {x: -1, y: 0}, {x: 1, y: 0}, "#00f", gridAlpha * 2, gridWeight * 2);
+    drawLine (gridG, {x: 0, y: -1}, {x: 0, y: 1}, "#00f", gridAlpha * 2, gridWeight * 2);
     let gridSize = 50;
     for (let i = 1; i <= gridSize; ++i) {
         let val = i / gridSize;
-        makeLine (gridG, {x: -1, y: val}, {x: 1, y: val}, "#08f", gridAlpha, gridWeight);
-        makeLine (gridG, {x: -1, y: -val}, {x: 1, y: -val}, "#08f", gridAlpha, gridWeight);
-        makeLine (gridG, {x: val, y: -1}, {x: val, y: 1}, "#08f", gridAlpha, gridWeight);
-        makeLine (gridG, {x: -val, y: -1}, {x: -val, y: 1}, "#08f", gridAlpha, gridWeight);
+        drawLine (gridG, {x: -1, y: val}, {x: 1, y: val}, "#08f", gridAlpha, gridWeight);
+        drawLine (gridG, {x: -1, y: -val}, {x: 1, y: -val}, "#08f", gridAlpha, gridWeight);
+        drawLine (gridG, {x: val, y: -1}, {x: val, y: 1}, "#08f", gridAlpha, gridWeight);
+        drawLine (gridG, {x: -val, y: -1}, {x: -val, y: 1}, "#08f", gridAlpha, gridWeight);
     }
     //svgClient.appendChild(gridG);
 
@@ -307,9 +306,8 @@
     let drawX = function (container, scale, move) {
         let xColor = "#fab";
         drawMove (container, scale, move, function (xG) {
-            makeWiggleLine (xG, { x: 0.25, y: 0.25 }, { x: 0.75, y: 0.75 }, xColor, 1.0, 0.075, 0.015, 3);
-            makeWiggleLine (xG, { x: 0.25, y: 0.75 }, { x: 0.75, y: 0.25 }, xColor, 1.0, 0.075, 0.015, 3);
-
+            drawWiggleLine (xG, { x: 0.25, y: 0.25 }, { x: 0.75, y: 0.75 }, xColor, 1.0, 0.075, 0.015, 3);
+            drawWiggleLine (xG, { x: 0.25, y: 0.75 }, { x: 0.75, y: 0.25 }, xColor, 1.0, 0.075, 0.015, 3);
         });
     };
 
@@ -330,19 +328,8 @@
             }
 
             points = perturbPath (points, 0.005);
-            //points = smoothPath(points, 1);
-            //drawPath (xG, points, "red", 0.5, 0.1);
-
-            //points = smoothPath(points, 1);
-            //drawPath (xG, points, "blue", 1.0, 0.05);
-
-            //points = smoothPath(points, 1);
-            //drawPath (xG, points, "black", 1.0, 0.01);
-
             points = smoothPath(points, 2);
             drawPath (xG, points, oColor, 1.0, 0.075);
-
-            //makePerturbedPath (xG, points, "red", 1.0, 0.02, 0.01);
         });
     };
 
@@ -353,10 +340,10 @@
         let boardG = Builder.add ("http://www.w3.org/2000/svg;g", { attribute: {
             transform: "translate(" + location.x + "," + location.y + ") scale (" + scale + ")"
         } });
-        makeWiggleLine (boardG, { x: 0, y: 0.333 }, { x: 1, y: 0.333 }, boardColor, 1.0, boardWeight, boardVariance, 8);
-        makeWiggleLine (boardG, { x: 0, y: 0.667 }, { x: 1, y: 0.667 }, boardColor, 1.0, boardWeight, boardVariance, 8);
-        makeWiggleLine (boardG, { x: 0.333, y: 0 }, { x: 0.333, y: 1 }, boardColor, 1.0, boardWeight, boardVariance, 8);
-        makeWiggleLine (boardG, { x: 0.667, y: 0 }, { x: 0.667, y: 1 }, boardColor, 1.0, boardWeight, boardVariance, 8);
+        drawWiggleLine (boardG, { x: 0, y: 0.333 }, { x: 1, y: 0.333 }, boardColor, 1.0, boardWeight, boardVariance, 8);
+        drawWiggleLine (boardG, { x: 0, y: 0.667 }, { x: 1, y: 0.667 }, boardColor, 1.0, boardWeight, boardVariance, 8);
+        drawWiggleLine (boardG, { x: 0.333, y: 0 }, { x: 0.333, y: 1 }, boardColor, 1.0, boardWeight, boardVariance, 8);
+        drawWiggleLine (boardG, { x: 0.667, y: 0 }, { x: 0.667, y: 1 }, boardColor, 1.0, boardWeight, boardVariance, 8);
 
         // now add the board positions
         for (let row = 0; row < Board.DIMENSION; ++row) {
@@ -388,20 +375,5 @@
         drawBoard (svgClient, Board.fromString (wins[i]), size, { x: -1 + (i * spacing), y: 0 });
         drawBoard (svgClient, Board.fromString (wins[i + halfWins]), size, { x: -1 + (i *spacing), y: spacing });
     }
-
-    /*
-    svgClient.appendChild(Builder
-        .add ("http://www.w3.org/2000/svg;circle", {
-            attributes: {
-                "cx": 0, "cy": 0,
-                "r": 0.5,
-                "stroke": "black",
-                "stroke-width": 0.1,
-                "fill": "yellow"
-            }
-        })
-    );
-    */
-
 
 </script>
