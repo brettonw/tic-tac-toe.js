@@ -14,8 +14,8 @@ let testPlayer = function () {
     Test.assertTrue("player.X.name", Player.X.name == "X");
     Test.assertTrue("player.O.name", Player.O.name == "O");
 
-    Test.assertTrue("player.next (X -> O)", Player.X.next () === Player.O);
-    Test.assertTrue("player.next (O -> X)", Player.O.next () === Player.X);
+    Test.assertTrue("player.next (X -> O)", Player.X.next === Player.O);
+    Test.assertTrue("player.next (O -> X)", Player.O.next === Player.X);
 } ();
 
 let testTransformation = function () {
@@ -32,17 +32,17 @@ let testTransformation = function () {
 
 let testMove = function () {
     console.log ("testMove");
-    Test.assertTrue("M00 = (0, 0)", (Move.M00.x () == 0) && (Move.M00.y () == 0));
-    Test.assertTrue("M01 = (0, 1)", (Move.M01.x () == 0) && (Move.M01.y () == 1));
-    Test.assertTrue("M02 = (0, 2)", (Move.M02.x () == 0) && (Move.M02.y () == 2));
+    Test.assertTrue("M00 = (0, 0)", (Move.M00.x == 0) && (Move.M00.y == 0));
+    Test.assertTrue("M01 = (0, 1)", (Move.M01.x == 0) && (Move.M01.y == 1));
+    Test.assertTrue("M02 = (0, 2)", (Move.M02.x == 0) && (Move.M02.y == 2));
 
-    Test.assertTrue("M10 = (1, 0)", (Move.M10.x () == 1) && (Move.M10.y () == 0));
-    Test.assertTrue("M11 = (1, 1)", (Move.M11.x () == 1) && (Move.M11.y () == 1));
-    Test.assertTrue("M12 = (1, 2)", (Move.M12.x () == 1) && (Move.M12.y () == 2));
+    Test.assertTrue("M10 = (1, 0)", (Move.M10.x == 1) && (Move.M10.y == 0));
+    Test.assertTrue("M11 = (1, 1)", (Move.M11.x == 1) && (Move.M11.y == 1));
+    Test.assertTrue("M12 = (1, 2)", (Move.M12.x == 1) && (Move.M12.y == 2));
 
-    Test.assertTrue("M20 = (2, 0)", (Move.M20.x () == 2) && (Move.M20.y () == 0));
-    Test.assertTrue("M21 = (2, 1)", (Move.M21.x () == 2) && (Move.M21.y () == 1));
-    Test.assertTrue("M22 = (2, 2)", (Move.M22.x () == 2) && (Move.M22.y () == 2));
+    Test.assertTrue("M20 = (2, 0)", (Move.M20.x == 2) && (Move.M20.y == 0));
+    Test.assertTrue("M21 = (2, 1)", (Move.M21.x == 2) && (Move.M21.y == 1));
+    Test.assertTrue("M22 = (2, 2)", (Move.M22.x == 2) && (Move.M22.y == 2));
 
 	Test.assertTrue("(0, 0) = M00", Move.get (0, 0) == Move.M00);
 	Test.assertTrue("(0, 1) = M01", Move.get (0, 1) == Move.M01);
@@ -105,7 +105,7 @@ let testRefereeLegalMoves = function () {
 
 let testRefereeWins = function () {
 	console.log ("testRefereeWins");
-	let wins = Referee.getWins ();
+	let wins = Referee.wins;
 	for (let win of wins) {
 		let board = Board.fromString (win);
 		//console.log ("board: " + board.toString ());

@@ -19,6 +19,51 @@
 <script>
     let Builder = Bedrock.Html.Builder;
 
+    let SvgPt = function () {
+        let _ = Object.create(Bedrock.Base);
+
+        _.init = function (parameters) {
+            this.x = parameters.x;
+            this.y = parameters.y;
+            return this;
+        };
+
+        Object.defineProperty (_, "lengthSq", { get: function () {
+                return _.dot (this, this);
+            } });
+
+        Object.defineProperty (_, "length", { get: function () {
+                return Math.sqrt(this.lengthSq);
+            } });
+
+        _.invert = function (a) {
+            return _.new ({ x: -a.x, y: -a.y });
+        };
+
+        _.add = function (a, b) {
+            return _.new ({ x: a.x + b.x, y: a.y + b.y });
+        };
+
+        _.subtract = function (a, b) {
+            return _.new ({ x: a.x - b.x, y: a.y - b.y });
+        };
+
+        _.scale = function (a, b) {
+            return _.new ({ x: a.x * b, y: a.y * b });
+        };
+
+        _.dot = function (a, b) {
+            return (a.x * b.x) + (a.y * b.y);
+        };
+
+        _.pt = function (x, y) {
+            return _.new ({ x:x, y:y });
+        };
+
+
+        return _;
+    } ();
+
     let SvgTransformer = function () {
         let _ = Object.create(Bedrock.Base);
 
@@ -42,22 +87,20 @@
             this.parentId = parameters.parentId;
             this.view = parameters.view;
             this.rootScale = parameters.rootScale;
-            this.x = 0;
-            this.y = 0;
+            this.xy = SvgPt.pt(0, 0);
             this.si = viewScale1;
             this.mouseDownEvent = null;
             return this;
         };
 
         _.setTransform = function () {
-            this.view.setAttribute ("transform", "translate(" + this.x + "," + this.y + ") scale(" + viewScales[this.si] + ")");
+            this.view.setAttribute ("transform", "translate(" + this.xy.x + "," + this.xy.y + ") scale(" + viewScales[this.si] + ")");
             document.getElementById(this.parentId + "-zoom-div").innerText = viewScales[this.si].toFixed (4) + "X";
         };
 
         _.handleSvgMouseDown = function (event) {
             this.mouseDownEvent = event;
-            this.oldX = this.x;
-            this.oldY = this.y;
+            this.oldXY = this.xy;
             //console.log ("down");
         };
 
@@ -69,8 +112,7 @@
         _.handleSvgMouseMove = function (event) {
             if (this.mouseDownEvent !== null) {
                 //console.log ("move");
-                this.x = this.oldX + ((event.clientX - this.mouseDownEvent.clientX) / this.rootScale);
-                this.y = this.oldY + ((event.clientY - this.mouseDownEvent.clientY) / this.rootScale);
+                this.xy = SvgPt.add(this.oldXY, SvgPt.scale (SvgPt.subtract (SvgPt.pt (event.clientX, event.clientY), SvgPt.pt (this.mouseDownEvent.clientX, this.mouseDownEvent.clientY)), this.rootScale));
                 this.setTransform ();
             }
         };
@@ -83,16 +125,9 @@
                 let deltaY = (event.wheelDeltaY !== undefined) ? event.wheelDeltaY : -event.deltaY;
                 if (Math.abs (deltaY) > 0) {
                     //console.log ("wheel - " + deltaY);
-                    let oldS = viewScales[this.si];
-                    let oldX = this.x;
-                    let oldY = this.y;
-
+                    let oldScale = viewScales[this.si];
                     this.si = Math.max (0, Math.min (viewScales.length - 1, this.si + (deltaY / Math.abs (deltaY))));
-                    let newS = viewScales[this.si];
-
-                    this.x = oldX * newS / oldS;
-                    this.y = oldY * newS / oldS;
-
+                    this.xy = SvgPt.scale(this.xy, viewScales[this.si] / oldScale);
                     this.setTransform ();
                 }
 
@@ -148,10 +183,9 @@
 
         // set up the view scales
         let bound = svgRoot.getBoundingClientRect ();
-        let rootScale = Math.min (bound.width, bound.height);
-        let translateX = bound.width / (2 * rootScale);
-        let translateY = bound.height / (2 * rootScale);
-        rootG.setAttribute ("transform", "scale(" + rootScale + ") translate(" + translateX + "," + translateY + ")");
+        let rootScale = 1 / Math.min (bound.width, bound.height);
+        let translate = SvgPt.scale (SvgPt.pt (bound.width, bound.height), rootScale / 2);
+        rootG.setAttribute ("transform", "scale(" + (1.0 / rootScale) + ") translate(" + translate.x + "," + translate.y + ")");
 
         // create a transformer object to manipulate the view
         svgRoot.svgTransformer = SvgTransformer.new ({ parentId: parent.id, view: viewG, rootScale: rootScale });
@@ -197,26 +231,22 @@
     let smoothPath = function (pointsIn, pass) {
         // function to create a new point between b and c that splits the difference
         let subdivideSegment = function (a, b, c, d) {
-            let halfStepLength = function (a, b) {
-                let d = { x: b.x - a.x, y: b.y - a.y };
-                return Math.sqrt((d.x * d.x) + (d.y * d.y));
-            };
             let halfStep = function (a, b, scale) {
-                let d = halfStepLength(a, b);
-                return { x: b.x + (((b.x - a.x) / d) * scale), y: b.y + (((b.y - a.y) / d) * scale) };
+                let ab = SvgPt.subtract (b, a);
+                return SvgPt.add (b, SvgPt.scale (ab, scale / ab.length));
             };
 
-            let abLength = halfStepLength(a, b);
-            let dcLength = halfStepLength(d, c);
+            let abLength = SvgPt.subtract(a, b).length;
+            let dcLength = SvgPt.subtract(d, c).length;
             let scale = Math.min (abLength, dcLength) / 5;
             let ab = halfStep(a, b, scale);
             let dc = halfStep(d, c, scale);
-            return { x: (ab.x + dc.x) / 2, y: (ab.y + dc.y) / 2 };
+            return SvgPt.scale (SvgPt.add (ab, dc), 1.0 / 2.0);
         };
 
         // function to reflect b across a
         let reflectPoint = function (a, b) {
-            return { x: a.x + (a.x - b.x), y: a.y + (a.y - b.y) };
+            return SvgPt.add (a, SvgPt.subtract(a, b));
         };
 
         // create a copy of the points we can manipulate
@@ -239,10 +269,10 @@
 
     let perturbPath = function (points, perturbDelta) {
         let perturbPoint = function (pt) {
-            return {
-                x: pt.x + (((Math.random () * 2) - 1) * perturbDelta),
-                y:pt.y + (((Math.random () * 2) - 1) * perturbDelta)
-            };
+            return SvgPt.add (pt, SvgPt.pt (
+                (((Math.random () * 2) - 1) * perturbDelta),
+                (((Math.random () * 2) - 1) * perturbDelta)
+            ));
         };
         // randomly perturb each of the points
         let perturbedPoints = [];
@@ -254,13 +284,13 @@
 
     let drawWiggleLine = function (container, a, b, color, alpha, width, perturbDelta, parts) {
         // split the line into parts
-        let delta = { x: b.x - a.x, y: b.y - a.y };
-        let deltaLength = Math.sqrt ((delta.x * delta.x) + (delta.y * delta.y));
+        let delta = SvgPt.subtract (b, a);//{ x: b.x - a.x, y: b.y - a.y };
+        let deltaLength = delta.length; //Math.sqrt ((delta.x * delta.x) + (delta.y * delta.y));
         let points = [a];
 
         for (let i = 1; i < parts; ++i) {
             let d = deltaLength * (i / parts);
-            let point = { x: a.x + (d * delta.x), y: a.y + (d * delta.y)};
+            let point = SvgPt.add (a, SvgPt.scale(delta, d));//{ x: a.x + (d * delta.x), y: a.y + (d * delta.y)};
             points.push(point);
         }
         points.push(b);
@@ -274,47 +304,42 @@
     let gridG = Builder.add ("http://www.w3.org/2000/svg;g");
     let gridAlpha = 0.1;
     let gridWeight = 0.002;
-    drawLine (gridG, {x: -1, y: 0}, {x: 1, y: 0}, "#00f", gridAlpha * 2, gridWeight * 2);
-    drawLine (gridG, {x: 0, y: -1}, {x: 0, y: 1}, "#00f", gridAlpha * 2, gridWeight * 2);
+    drawLine (gridG, SvgPt.pt (-1, 0), SvgPt.pt (1, 0), "#00f", gridAlpha * 2, gridWeight * 2);
+    drawLine (gridG, SvgPt.pt (0, -1), SvgPt.pt (0, 1), "#00f", gridAlpha * 2, gridWeight * 2);
     let gridSize = 50;
     for (let i = 1; i <= gridSize; ++i) {
         let val = i / gridSize;
-        drawLine (gridG, {x: -1, y: val}, {x: 1, y: val}, "#08f", gridAlpha, gridWeight);
-        drawLine (gridG, {x: -1, y: -val}, {x: 1, y: -val}, "#08f", gridAlpha, gridWeight);
-        drawLine (gridG, {x: val, y: -1}, {x: val, y: 1}, "#08f", gridAlpha, gridWeight);
-        drawLine (gridG, {x: -val, y: -1}, {x: -val, y: 1}, "#08f", gridAlpha, gridWeight);
+        drawLine (gridG, SvgPt.pt (-1, val), SvgPt.pt (1, val), "#08f", gridAlpha, gridWeight);
+        drawLine (gridG, SvgPt.pt (-1, -val), SvgPt.pt (1, -val), "#08f", gridAlpha, gridWeight);
+        drawLine (gridG, SvgPt.pt (val, -1), SvgPt.pt (val, 1), "#08f", gridAlpha, gridWeight);
+        drawLine (gridG, SvgPt.pt (-val, -1), SvgPt.pt (-val, 1), "#08f", gridAlpha, gridWeight);
     }
     //svgClient.appendChild(gridG);
 
-    let drawMove = function (container, scale, move, drawInto) {
-        let offsetBase = 0.035;
-        let offset = {
-            x: ((Math.random() * 2) - 1) * offsetBase,
-            y: ((Math.random() * 2) - 1) * offsetBase
-        };
-        let scaleOffset = 3 + (((Math.random() * 2) - 1) * 0.1);
-        let rotate = ((Math.random() * 2) - 1) * 6; // degrees
-
-        let y = (Board.DIMENSION - 1) - move.y ();
+    let drawMove = function (container, move, drawInto) {
+        let offset = SvgPt.scale (SvgPt.pt ((Math.random() * 2) - 1, (Math.random() * 2) - 1), 0.05);
+        let translate = SvgPt.add (SvgPt.pt (move.x, (Board.DIMENSION - 1) - move.y), offset);
+        let scaleOffset = 1 + (((Math.random() * 2) - 1) * 0.05);
+        let rotate = ((Math.random() * 2) - 1) * 8; // degrees
         let xG = Builder.add ("http://www.w3.org/2000/svg;g", { attribute: {
-                transform: "translate(" + ((move.x () + offset.x) / 3) + "," + ((y + offset.y) / 3) + ") scale (" + (1 / scaleOffset) + ") rotate (" + rotate + ")"
+                transform: "scale (" + (1.0 / 3.0) + ") translate(" + translate.x + "," + translate.y + ") translate (0.5, 0.5) scale (" + scaleOffset + ") rotate (" + rotate + ") translate (-0.5, -0.5)"
             } });
         drawInto (xG);
         container.appendChild (xG);
     };
 
-    let drawX = function (container, scale, move) {
+    let drawX = function (container, move) {
         let xColor = "#fab";
-        drawMove (container, scale, move, function (xG) {
+        drawMove (container, move, function (xG) {
             drawWiggleLine (xG, { x: 0.25, y: 0.25 }, { x: 0.75, y: 0.75 }, xColor, 1.0, 0.075, 0.015, 3);
             drawWiggleLine (xG, { x: 0.25, y: 0.75 }, { x: 0.75, y: 0.25 }, xColor, 1.0, 0.075, 0.015, 3);
         });
     };
 
     Math.TWO_PI = Math.PI * 2;
-    let drawO = function (container, scale, move) {
+    let drawO = function (container, move) {
         let oColor = "#9af";
-        drawMove (container, scale, move, function (xG) {
+        drawMove (container, move, function (xG) {
             let posFromAngle = function (angle) {
                 return { x: (Math.cos(angle) / 4) + 0.5, y: (Math.sin (angle) / 4) + 0.5 };
             };
@@ -352,10 +377,10 @@
                 let player = board.getPlayer (move);
                 switch (player) {
                     case Player.X:
-                        drawX (boardG, scale, move);
+                        drawX (boardG, move);
                         break;
                     case Player.O:
-                        drawO (boardG, scale, move);
+                        drawO (boardG, move);
                         break;
                     default:
                         break;
@@ -366,7 +391,7 @@
         container.appendChild (boardG);
     };
 
-    let wins = Referee.getWins();
+    let wins = Referee.wins;
     let halfWins = wins.length / 2;
     let size = 0.15;
     let spacingScale = 1.5;

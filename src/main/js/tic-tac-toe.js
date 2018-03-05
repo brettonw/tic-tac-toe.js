@@ -3,9 +3,14 @@
 let Player = function () {
     let _ = Enum.create ("E", "X", "O");
 
+    Object.defineProperty(_, "next", { get: function() {
+    	return Player.values[this.value ^ 0x03];
+    } });
+    /*
     _.next = function () {
         return Player.values[this.value ^ 0x03];
     };
+    */
 
     return _;
 } ();
@@ -39,14 +44,24 @@ let Move = function () {
 		// XXX should check that the move is legal
 		return this.values[(y * Board.DIMENSION) + x];
 	};
-	
+
+    Object.defineProperty(_, "x", { get: function() {
+    	return this.value % Board.DIMENSION;
+    } });
+    /*
     _.x = function () {
 		return this.value % Board.DIMENSION;
     };
+    */
 
+    Object.defineProperty(_, "y", { get: function() {
+    	return Math.floor (this.value / Board.DIMENSION);
+    } });
+    /*
     _.y = function () {
 		return Math.floor (this.value / Board.DIMENSION);
     };
+    */
 
     return _;
 } ();
@@ -167,10 +182,15 @@ let Referee = function () {
 		"OEEEOEEEOO",
 		"EEOEOEOEEO"
 	];
-	
+
+    Object.defineProperty(_, "wins", { get: function() {
+		return WINS;
+	} });
+    /*
 	_.getWins = function () {
 		return WINS;
 	};
+	*/
 	
 	// loop over all of the open spaces on the board to determine allowed moves
 	_.getAvailableMoves = function (board) {
@@ -277,7 +297,7 @@ let State = function () {
 					// they didn't, so use recursion to keep playing. note we
 					// don't need to worry about this recursion, as it can 
 					// never go deeper than the max number of moves (9)
-					playAll (makeLink (Transformation.R0, newState), player.next ());
+					playAll (makeLink (Transformation.R0, newState), player.next);
 				}
 			} else {
 				// stop populating from here because the branch has already 
